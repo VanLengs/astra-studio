@@ -13,10 +13,12 @@ Automatically produce all specification files for a plugin based on the planning
 
 1. Verify `studio/` exists.
 2. Read `studio/changes/$ARGUMENTS/skill-map.md` — required. If missing, tell the user to run `/studio-planner:skill-design` first.
-3. Read `studio/changes/$ARGUMENTS/domain-map.md` — optional, used for brief and manifest context.
-4. Read `studio/changes/$ARGUMENTS/event-storm.md` — optional, used for brief context.
-5. Read `${CLAUDE_SKILL_DIR}/../../templates/brief.md.tmpl` — template for brief.md.
-6. Read `${CLAUDE_SKILL_DIR}/../../templates/status.json.tmpl` — template for status.json.
+3. Read `studio/changes/$ARGUMENTS/status.json` to get the `domain` field. Use it to locate domain-level artifacts:
+   - Read `studio/changes/{domain}/domain-map.md` — optional, used for brief and manifest context.
+   - Read `studio/changes/{domain}/event-storm.md` — optional, used for brief context.
+   - If no `domain` field or domain-level files don't exist, proceed without them.
+4. Read `${CLAUDE_SKILL_DIR}/../../templates/brief.md.tmpl` — template for brief.md.
+5. Read `${CLAUDE_SKILL_DIR}/../../templates/status.json.tmpl` — template for status.json.
 
 ## Workflow
 

@@ -147,15 +147,18 @@ Write `event-storm.md` with the following sections:
 {List of all ◇ decision points — these inform skill boundaries}
 ```
 
-Write `status.json`:
+Write `status.json` — this is a **domain-level** workspace (not yet a plugin). The `type` field distinguishes it:
+
 ```json
 {
-  "plugin": "{domain-slug}",
-  "target_collection": "plugins",
+  "type": "domain",
+  "domain": "{domain-slug}",
   "phase": "planning",
   "created_at": "{ISO-8601}",
-  "skills": {}
+  "plugins": []
 }
 ```
+
+Note: domain-level workspaces have `"type": "domain"` and a `plugins` list (initially empty). Plugin-level workspaces have `"type": "plugin"` and a `skills` map. The `domain-model` skill will create plugin-level workspaces and populate the `plugins` list here.
 
 Tell the user: "Event storm complete. Run `/studio-planner:domain-model {domain-slug}` to identify plugin boundaries, or run `/studio-planner:plan {domain-slug}` to continue the full pipeline."

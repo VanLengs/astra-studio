@@ -145,13 +145,39 @@ Write `studio/changes/{name}/domain-map.md`:
 - **Rationale**: {why this structure}
 ```
 
-If the user confirmed multiple plugins, create a workspace directory per plugin:
+For each confirmed plugin candidate, create a **plugin-level** workspace as a peer directory alongside the domain workspace:
 
 ```
 studio/changes/{plugin-name}/
 └── status.json
 ```
 
-Update each `status.json` with phase `planning`.
+Each plugin's `status.json` references back to the domain workspace:
+
+```json
+{
+  "type": "plugin",
+  "plugin": "{plugin-name}",
+  "domain": "{domain-slug}",
+  "target_collection": "plugins",
+  "phase": "planning",
+  "created_at": "{ISO-8601}",
+  "skills": {}
+}
+```
+
+The `domain` field points to `studio/changes/{domain-slug}/` where `event-storm.md` and `domain-map.md` live. This avoids duplicating domain-level artifacts into each plugin workspace.
+
+Also update the domain workspace's `status.json` to register the plugins:
+
+```json
+{
+  "type": "domain",
+  "domain": "{domain-slug}",
+  "phase": "planning",
+  "created_at": "...",
+  "plugins": ["{plugin-name-1}", "{plugin-name-2}"]
+}
+```
 
 Tell the user: "Domain model complete. Run `/studio-planner:skill-design {plugin-name}` to design skills for each plugin."

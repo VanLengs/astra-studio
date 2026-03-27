@@ -18,11 +18,13 @@ If `studio/` doesn't exist, suggest running `/studio-core:init`.
 ### Step 2: Scan active changes
 
 For each directory in `studio/changes/` (excluding `.gitkeep`):
-1. Read `status.json` — if missing, show the plugin with phase "unknown"
-2. Extract: plugin name, phase, target_collection, skill statuses
-3. Calculate completion: count skills with status `tested` or `approved` vs total skill count
+1. Read `status.json` — if missing, show the entry with phase "unknown"
+2. Check `type` field to distinguish workspace types:
+   - `"type": "domain"` → domain-level workspace (event-storm, domain-map). Show domain name and its `plugins` list.
+   - `"type": "plugin"` (or no `type` field for legacy) → plugin-level workspace. Show plugin name, phase, skills, target.
+3. For plugin workspaces: extract plugin name, phase, target_collection, skill statuses. Calculate completion: count skills with status `tested` or `approved` vs total.
 
-If `studio/changes/` is empty (only `.gitkeep`), note "No active plugins" and skip to Step 3.
+If `studio/changes/` is empty (only `.gitkeep`), note "No active work" and skip to Step 3.
 
 ### Step 3: Scan recent archives
 
@@ -39,13 +41,17 @@ Format as a table:
 Studio Status
 ═════════════
 
-Active (studio/changes/)
-┌──────────────────┬────────────┬────────────────┬───────────┐
-│ Plugin           │ Phase      │ Skills         │ Target    │
-├──────────────────┼────────────┼────────────────┼───────────┤
-│ deal-flow        │ building   │ 1/3 tested     │ plugins/  │
-│ risk-monitor     │ approved   │ 2/2 tested     │ plugins/  │
-└──────────────────┴────────────┴────────────────┴───────────┘
+Domains (studio/changes/)
+  children-health    planning    plugins: nutrition-planner, exercise-addon, health-reports
+
+Plugins (studio/changes/)
+┌──────────────────┬────────────┬────────────────┬───────────────────┐
+│ Plugin           │ Phase      │ Skills         │ Target            │
+├──────────────────┼────────────┼────────────────┼───────────────────┤
+│ nutrition-planner│ building   │ 1/4 tested     │ plugins/          │
+│ exercise-addon   │ planning   │ 0/3 draft      │ plugins/          │
+│ health-reports   │ approved   │ 2/2 tested     │ plugins/          │
+└──────────────────┴────────────┴────────────────┴───────────────────┘
 
 Recently Shipped (studio/archive/)
   2026-03-25-auth-plugin → plugins/my-collection/auth-plugin
