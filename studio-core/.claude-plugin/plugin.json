@@ -1,0 +1,14 @@
+{
+  "name": "studio-core",
+  "version": "0.1.0",
+  "description": "Studio workspace management — initialize studio/ in your project, track plugin development status, and promote approved plugins to production",
+  "author": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["studio", "workspace", "promote", "lifecycle"],
+  "skills": "./skills/",
+  "commands": "./commands/",
+  "hooks": "./hooks/hooks.json"
+}

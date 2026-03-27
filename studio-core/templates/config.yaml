@@ -1,0 +1,29 @@
+# Astra Studio Configuration
+# This file is created by /studio-core:init and lives at studio/config.yaml
+# It is git-tracked — shared across the team.
+
+# Development schema
+schema: plugin-first
+
+# Default settings for new plugin workspaces
+defaults:
+  # Where to promote plugins (relative to project root)
+  target_collection: plugins
+  # Default governance metadata
+  governance:
+    risk_level: low
+    review_status: draft
+
+# Plugin development lifecycle
+lifecycle:
+  # Phases a plugin passes through
+  phases:
+    - planning      # brief.md written, skills being decomposed
+    - building      # SKILL.md files being authored and tested
+    - testing       # all skills tested, plugin-level validation
+    - approved      # validation passed, ready to promote
+    - shipped       # promoted to target, archived
+  # Phase required before promote is allowed
+  promote_requires: approved
+  # Automatically archive to studio/archive/ after promote
+  archive_on_promote: true

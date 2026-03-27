@@ -1,0 +1,13 @@
+{
+  "name": "astra-studio",
+  "version": "0.1.0",
+  "description": "Plugin development studio for Claude Code — plan, design, validate, and ship plugins",
+  "author": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "homepage": "https://github.com/VanLengs/astra-studio",
+  "repository": "https://github.com/VanLengs/astra-studio",
+  "license": "Apache-2.0",
+  "keywords": ["plugin-development", "skill-authoring", "studio", "marketplace"]
+}

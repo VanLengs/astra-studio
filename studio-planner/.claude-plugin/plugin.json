@@ -1,0 +1,14 @@
+{
+  "name": "studio-planner",
+  "version": "0.1.0",
+  "description": "Plugin planning suite — analyze business domains, design plugin architecture, and decompose into skills. Use when starting a new plugin or restructuring an existing one.",
+  "author": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["planning", "architecture", "business-analysis", "skill-decomposition"],
+  "dependencies": ["studio-core"],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

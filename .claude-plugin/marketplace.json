@@ -1,0 +1,25 @@
+{
+  "name": "astra-studio",
+  "version": "0.1.0",
+  "owner": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "plugins": [
+    {
+      "name": "studio-core",
+      "source": "./studio-core",
+      "description": "Studio workspace management — init, promote, status"
+    },
+    {
+      "name": "studio-planner",
+      "source": "./studio-planner",
+      "description": "Plugin planning — business insight, architecture design, skill decomposition"
+    },
+    {
+      "name": "studio-quality",
+      "source": "./studio-quality",
+      "description": "Quality assurance — plugin structure validation, MCP wiring"
+    }
+  ]
+}

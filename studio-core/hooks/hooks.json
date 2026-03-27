@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -d studio/changes ]; then count=$(ls studio/changes 2>/dev/null | grep -v .gitkeep | wc -l | tr -d ' '); if [ \"$count\" -gt 0 ]; then echo \"[studio] $count active plugin(s) in development. Run /studio-core:status for details.\"; fi; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
