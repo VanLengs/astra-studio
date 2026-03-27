@@ -1,6 +1,6 @@
 # Plugin Architecture Guide
 
-Reference for designing Claude Code plugin collections. Used by `plugin-planner` to make architecture decisions.
+Reference for designing Claude Code plugin collections. Used by `domain-model` to make architecture decisions.
 
 ## Core Concepts
 

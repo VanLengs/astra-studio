@@ -1,6 +1,6 @@
 # Skill Decomposition Guide
 
-Reference for breaking plugins into well-scoped skills. Used by `skill-planner` to design skill boundaries.
+Reference for breaking plugins into well-scoped skills. Used by `skill-design` to design skill boundaries.
 
 ## Principles
 
