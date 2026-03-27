@@ -18,13 +18,18 @@ If `studio/` doesn't exist, suggest running `/studio-core:init`.
 ### Step 2: Scan active changes
 
 For each directory in `studio/changes/` (excluding `.gitkeep`):
-1. Read `status.json`
+1. Read `status.json` — if missing, show the plugin with phase "unknown"
 2. Extract: plugin name, phase, target_collection, skill statuses
-3. Calculate completion (how many skills are tested vs total)
+3. Calculate completion: count skills with status `tested` or `approved` vs total skill count
+
+If `studio/changes/` is empty (only `.gitkeep`), note "No active plugins" and skip to Step 3.
 
 ### Step 3: Scan recent archives
 
 List the 5 most recent directories in `studio/archive/` by name (date-prefixed).
+For each, read `status.json` to get `shipped_to` path if available.
+
+If `studio/archive/` is empty, note "No shipped plugins yet".
 
 ### Step 4: Display dashboard
 

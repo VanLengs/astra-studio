@@ -71,7 +71,9 @@ Present the ranked list to the user. They may adjust priorities based on factors
 
 ## Step 5: Produce Artifact
 
-For the top-priority plugin candidate, create the workspace:
+Ask the user which plugin candidates to create workspaces for. Default: top-priority candidate only. If the user wants multiple, create a workspace for each.
+
+For each selected candidate, create:
 
 ```
 studio/changes/{plugin-name}/
@@ -79,10 +81,14 @@ studio/changes/{plugin-name}/
 └── status.json       # { plugin, target_collection, phase: "planning", skills: {} }
 ```
 
-Write `brief.md` with:
+**Derive `{plugin-name}`** from the candidate name: lowercase, kebab-case, 2-4 words (e.g., "Deal Flow Screener" → `deal-flow-screener`).
+
+**If `studio/changes/{plugin-name}/` already exists**, ask whether to overwrite or pick a different name.
+
+Write `brief.md` using the template at `${CLAUDE_SKILL_DIR}/../../templates/brief.md.tmpl` as the base structure. Fill in:
 - Business context from the interview
-- Pain points addressed
-- Plugin candidates and priority ranking
+- Pain points addressed (with PP-IDs)
+- All plugin candidates and priority ranking (not just the selected one — context matters)
 - Success criteria
 
 Write `status.json`:
@@ -96,4 +102,6 @@ Write `status.json`:
 }
 ```
 
-The next skill in the pipeline (`plugin-planner`) consumes this workspace.
+Print a summary of what was created, then tell the user:
+- "Run `/studio-planner:plugin-planner {plugin-name}` to design the plugin architecture"
+- Or "Run `/studio-planner:plan {plugin-name}` to continue the full planning pipeline"

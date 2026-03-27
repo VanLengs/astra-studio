@@ -26,10 +26,18 @@ If the plugin already has a `.mcp.json`, read it first — merge new entries rat
 
 ## Step 2: Scan Requirements
 
-Scan all SKILL.md files in the plugin and detect:
+Run the MCP requirements scanner:
+
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/scan_mcp_requirements.py <plugin-dir>
+```
+
+This scans all SKILL.md files to detect:
 - `allowed-tools` frontmatter entries referencing MCP tools (e.g., `mcp__server__tool`)
 - Tool references in body text suggesting external capabilities
-- Explicit MCP mentions in instructions
+- Capability keywords (database, web search, Slack, etc.)
+
+Capture the JSON output — it contains matched servers, unmatched references, and capability hints.
 
 ## Step 3: Match Servers
 
@@ -52,7 +60,14 @@ If a requirement has no known server match, flag it for the user.
 
 ## Step 4: Generate Config
 
-Generate `.mcp.json` with the standard structure:
+Pipe the scan output into the config generator:
+
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/scan_mcp_requirements.py <plugin-dir> | \
+python ${CLAUDE_SKILL_DIR}/../../scripts/generate_mcp_json.py <plugin-dir> --merge
+```
+
+The `--merge` flag preserves existing entries in `.mcp.json`. The script generates the standard structure:
 
 ```json
 {
@@ -73,12 +88,13 @@ Use `${CLAUDE_PLUGIN_DATA}` for persistent data paths.
 
 ## Step 5: Validate
 
-Check:
-- `.mcp.json` is valid JSON
-- Each server entry has `command` field
-- Environment variables are documented
-- No duplicate server names
-- Plugin manifest references `.mcp.json` (`"mcpServers": "./.mcp.json"`)
+Run the MCP config validator:
+
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/validate_mcp_config.py <plugin-dir>
+```
+
+This checks: .mcp.json is valid JSON, each server has a command field, environment variables are documented, and the plugin manifest references .mcp.json.
 
 ## Step 6: Review with User
 

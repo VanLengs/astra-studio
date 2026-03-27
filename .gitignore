@@ -21,3 +21,6 @@ node_modules/
 # Build artifacts
 *.skill
 dist/
+
+# Generated reports
+.validation-report.json

@@ -9,6 +9,8 @@ user-invocable: true
 
 Design the architecture of a plugin collection — how many plugins, their roles, boundaries, and skill allocation.
 
+Consult the architecture guide at `${CLAUDE_SKILL_DIR}/../../references/plugin-architecture-guide.md` for decision frameworks on collection structure, core vs add-on roles, and naming conventions.
+
 ## Pre-check
 
 Verify `studio/` exists. If not, tell the user to run `/studio-core:init` first.
@@ -57,22 +59,28 @@ Rules:
 
 ## Step 4: Draft Manifests
 
-For each plugin, draft a `plugin.json` following the Claude Code plugin spec:
+For each plugin, draft a `plugin.json.draft` following the Claude Code plugin spec:
 
 ```json
 {
   "name": "plugin-name",
   "version": "0.1.0",
-  "description": "What this plugin does",
+  "description": "What this plugin does — one sentence, specific",
   "author": { "name": "Team Name" },
   "license": "Apache-2.0",
   "keywords": ["relevant", "keywords"],
+  "dependencies": [],
   "skills": "./skills/",
   "commands": "./commands/"
 }
 ```
 
-No `x-astra` extensions — keep it standard Claude Code compatible.
+Rules:
+- `name`: must match the workspace directory name, kebab-case
+- `description`: one clear sentence — this appears in `claude plugin list`
+- `dependencies`: list other plugins in the collection this plugin requires (empty for independent plugins, `["core-plugin-name"]` for add-ons)
+- `keywords`: 3-5 searchable terms for marketplace discovery
+- No `x-astra` or custom extensions — keep it standard Claude Code compatible
 
 ## Step 5: Map Skills
 
@@ -99,9 +107,20 @@ studio/changes/{plugin-name}/
         └── SKILL.md
 ```
 
-If this is a multi-plugin collection, create a workspace per plugin.
+If this is a multi-plugin collection, create a workspace per plugin under `studio/changes/`. Each gets its own `plugin.json.draft`, `status.json`, and `skills/` directory. Also create a `studio/changes/_collection.json` to record the collection design:
 
-Update `status.json`:
+```json
+{
+  "collection": "{collection-name}",
+  "plugins": [
+    { "name": "core-plugin", "role": "core" },
+    { "name": "addon-plugin", "role": "add-on" }
+  ],
+  "created_at": "{ISO-8601}"
+}
+```
+
+Update each `status.json`:
 ```json
 {
   "plugin": "{name}",
@@ -115,4 +134,8 @@ Update `status.json`:
 }
 ```
 
-The next step: use the official `/skill-creator` to flesh out each SKILL.md skeleton.
+Print a summary listing all plugins, their roles, and skill allocations.
+
+Then tell the user:
+- "Run `/studio-planner:skill-planner {plugin-name}` to decompose each plugin into detailed skill specs"
+- Or use `/skill-creator` directly on any skeleton SKILL.md to start building

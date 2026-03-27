@@ -6,8 +6,8 @@
     "name": "VanLengs",
     "url": "https://github.com/VanLengs"
   },
-  "homepage": "https://github.com/VanLengs/astra-studio",
-  "repository": "https://github.com/VanLengs/astra-studio",
+  "homepage": "https://github.com/VanLengs/astra-studio-plugins",
+  "repository": "https://github.com/VanLengs/astra-studio-plugins",
   "license": "Apache-2.0",
   "keywords": ["plugin-development", "skill-authoring", "studio", "marketplace"]
 }

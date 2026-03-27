@@ -14,24 +14,39 @@ Inspired by [OpenSpec](https://github.com/Fission-AI/OpenSpec)'s `openspec init`
 ## Pre-check
 
 1. Check if `studio/` already exists at the project root
-   - If yes: read `studio/config.yaml`, report current status, list active changes, and exit
+   - If yes: read `studio/config.yaml`, report current status, list active changes via `ls studio/changes/`, and **exit without creating anything**
    - If no: proceed with initialization
+2. Confirm the current directory is a git repo (check for `.git/`). If not, warn: "studio/ is designed to be git-tracked. Consider running `git init` first." Proceed anyway if the user confirms.
 
 ## Steps
 
-1. Create the directory structure:
+1. Read the config template from `${CLAUDE_SKILL_DIR}/../../templates/config.yaml`. This file contains the default config — use its content verbatim.
+
+2. Create the directory structure and write files:
 
 ```
 studio/
-├── config.yaml          # studio configuration
+├── config.yaml          # copied from template
 ├── changes/             # active plugin development (one dir per plugin)
 │   └── .gitkeep
 └── archive/             # completed and archived plugin dev records
     └── .gitkeep
 ```
 
-2. Write `studio/config.yaml` from the template at `${CLAUDE_SKILL_DIR}/../../templates/config.yaml`
-3. Print a summary of what was created
+Create `.gitkeep` files as empty files — they ensure git tracks the empty directories.
+
+3. Print a summary:
+
+```
+Studio initialized at studio/
+
+  studio/config.yaml   — configuration
+  studio/changes/      — active plugin development
+  studio/archive/      — shipped plugin records
+
+This directory is git-tracked — commit it to share with your team.
+```
+
 4. Suggest next steps:
    - "Run `/studio-planner:plan <domain>` to start planning your first plugin"
    - "Or create a plugin workspace manually: `mkdir studio/changes/my-plugin`"

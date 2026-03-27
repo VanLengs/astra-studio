@@ -29,39 +29,43 @@ If the user gives a skill directory, navigate up to find the plugin root.
 
 ## Step 2: Structural Validation
 
-Check the following and report pass/fail for each:
+Run the structural validation script:
 
-- [ ] `.claude-plugin/plugin.json` exists and is valid JSON
-- [ ] Required fields present: `name`, `version`, `description`
-- [ ] Plugin name matches directory name (kebab-case)
-- [ ] `name` follows pattern: `^[a-z][a-z0-9-]*$`
-- [ ] `version` follows semver: `^\d+\.\d+\.\d+`
-- [ ] `skills` path in manifest points to an existing directory
-- [ ] `hooks` path resolves if declared
-- [ ] `mcpServers` path resolves if declared
-- [ ] `commands` path resolves if declared
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/validate_plugin.py <plugin-dir>
+```
+
+This checks: manifest exists and is valid JSON, required fields (name, version, description), kebab-case naming, semver version, and all declared paths (skills, commands, hooks, mcpServers) resolve.
 
 ## Step 3: Skill Validation
 
-For each skill directory found:
+Run the skill validation script:
 
-- [ ] `SKILL.md` exists
-- [ ] YAML frontmatter is valid
-- [ ] `name` field present and matches directory name
-- [ ] `description` present, under 1024 chars
-- [ ] No unexpected frontmatter keys (warn on unknown keys)
-- [ ] Line count under 500 (warn if over)
-- [ ] Referenced `scripts/*.py` files exist
-- [ ] Referenced `references/*.md` files exist
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/validate_skills.py <plugin-dir>
+```
+
+This checks per skill: SKILL.md exists with valid YAML frontmatter, required fields (name, description), name matches directory, description under 1024 chars, warns on unknown frontmatter keys and files over 500 lines, and verifies referenced scripts/ and references/ files exist.
 
 ## Step 4: Dependency Checks
 
-- [ ] If `.mcp.json` exists: valid JSON, each server has `command` field
-- [ ] Environment variables in MCP config are documented
-- [ ] If `hooks` declared: hooks.json is valid, event names are recognized
-- [ ] If `dependencies` in manifest: listed plugins exist or are documented
+Run the dependency check script:
+
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/check_dependencies.py <plugin-dir>
+```
+
+This checks: .mcp.json validity and server entries, hooks.json validity and recognized event names, and declared plugin dependencies.
 
 ## Step 5: Present Findings
+
+Generate the combined report by running:
+
+```bash
+python ${CLAUDE_SKILL_DIR}/../../scripts/generate_report.py <plugin-dir>
+```
+
+The script also saves a JSON report to `.validation-report.json` in the plugin directory.
 
 Summarize the report:
 
@@ -90,4 +94,13 @@ If the plugin is in `studio/changes/` and all checks pass:
 - Ask the user if they want to update `status.json` phase to `approved`
 - If yes, update the file
 
-If checks fail, suggest specific remediation steps for each failure.
+If checks fail, suggest specific remediation steps for each failure:
+
+| Common failure | Remediation |
+|---------------|-------------|
+| Missing plugin.json | Create `.claude-plugin/plugin.json` with name, version, description |
+| Name mismatch | Rename the directory or update the `name` field in plugin.json |
+| Invalid semver | Use `X.Y.Z` format (e.g., `0.1.0`) |
+| Missing SKILL.md | Create a SKILL.md with at least `name` and `description` in frontmatter |
+| Broken script ref | Create the missing script file or remove the reference |
+| Invalid .mcp.json | Run `/studio-quality:wire-mcp` to regenerate it |

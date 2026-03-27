@@ -9,6 +9,12 @@ user-invocable: true
 
 Break a plugin down into individual skills with clear scope boundaries, dependency mapping, and complexity assessment.
 
+Consult the decomposition guide at `${CLAUDE_SKILL_DIR}/../../references/skill-decomposition-guide.md` for split/merge rules, naming conventions, complexity tiers, and skeleton format.
+
+## Pre-check
+
+Verify `studio/` exists. If not, tell the user to run `/studio-core:init` first.
+
 ## Workflow
 
 1. **Parse input** — read `studio/changes/{name}/plugin.json.draft` or user description
@@ -21,10 +27,12 @@ Break a plugin down into individual skills with clear scope boundaries, dependen
 ## Step 1: Parse Input
 
 Accept one of:
-- A plugin workspace path in `studio/changes/{name}/`
+- A plugin name with a workspace in `studio/changes/{name}/`
 - A plugin name + description from the user
 
-If reading from workspace, use `plugin.json.draft` and `brief.md` for context.
+If the workspace exists, read `plugin.json.draft` for the plugin's description and skill list, and `brief.md` for business context. Use these to inform skill design.
+
+If existing SKILL.md skeletons are already present in `studio/changes/{name}/skills/`, read them. This skill can refine existing skeletons, not just create from scratch.
 
 ## Step 2: Enumerate Skills
 

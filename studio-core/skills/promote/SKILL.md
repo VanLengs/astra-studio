@@ -1,7 +1,7 @@
 ---
 name: promote
 description: Promote an approved plugin from studio/changes/ to the target plugins directory. Use when a plugin has passed validation, all skills are tested, and you want to ship it. Handles file copy, manifest finalization, and archiving the development record.
-allowed-tools: Read, Write, Bash, Glob, Grep
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep
 user-invocable: true
 ---
 
@@ -11,12 +11,17 @@ Move a completed plugin from the development workspace (`studio/changes/`) to it
 
 ## Pre-conditions
 
-1. Read `studio/changes/$ARGUMENTS/status.json`
-2. Verify `phase` is `approved` — if not, explain what's needed and exit
-3. Read `target_collection` from status.json (fallback to `studio/config.yaml` defaults)
-4. Verify all skills in status.json have status >= `tested`
+1. If `$ARGUMENTS` is empty, scan `studio/changes/` for plugins with phase `approved` and list them. If exactly one, use it. If multiple, ask the user to choose. If none, explain what's needed and exit.
+2. Read `studio/changes/$ARGUMENTS/status.json`
+3. Verify `phase` is `approved` — if not, show the current phase and explain:
+   - `planning` → "Run `/studio-planner:plan` to complete the design"
+   - `building` → "Use `/skill-creator` to finish building skills"
+   - `testing` → "Run `/studio-quality:validate` to approve it"
+   - `shipped` → "This plugin has already been shipped"
+4. Read `target_collection` from status.json (fallback to `studio/config.yaml` `defaults.target_collection`)
+5. Verify all skills in status.json have status `tested` or `approved`
 
-If pre-conditions fail, print a clear message about what needs to happen first.
+If pre-conditions fail, print a clear message about what needs to happen first and exit.
 
 ## Promote Steps
 
@@ -53,6 +58,9 @@ When copying `plugin.json.draft` → `plugin.json`:
 - Remove the `.draft` suffix
 - Ensure `name`, `version`, `description` are present
 - Set `skills` to `"./skills/"`
+- Add `"commands": "./commands/"` if a commands/ directory exists
+- Add `"hooks": "./hooks/hooks.json"` if a hooks/ directory exists
+- Add `"mcpServers": "./.mcp.json"` if a .mcp.json file exists
 
 ### Step 3: Archive development record
 
