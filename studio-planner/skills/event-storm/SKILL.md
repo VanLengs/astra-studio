@@ -20,10 +20,11 @@ Run a structured brainstorming session with multiple perspectives — product ma
 
 1. **Set the stage** — understand the domain and assemble roles
 2. **Discover events** — what happens in the business?
-3. **Map user journeys** — walk through real user workflows
-4. **Identify hotspots** — where are the pain points and opportunities?
-5. **Model processes** — organize events into time-ordered flows
-6. **Write output** — save event storm results to studio/changes/
+3. **Build personas** — invoke `persona-insight` skill for each user type
+4. **Map user journeys** — invoke `journey-map` skill for each persona
+5. **Model processes** — invoke `process-flow` skill for each major process
+6. **Identify hotspots** — synthesize all artifacts to find opportunities
+7. **Write output** — save event storm results to studio/changes/
 
 ## Step 1: Set the Stage
 
@@ -57,62 +58,67 @@ Use the Agent tool to run each role as a subagent. Give each subagent:
 
 Collect all events and **deduplicate** — different roles may describe the same event differently. Present the combined event list to the user for validation.
 
-## Step 3: Map User Journeys
+## Step 3: Build Personas
 
-Have the **product manager** role lead this step. For each user persona identified:
+Invoke the **persona-insight** skill for each user type identified in the events. Pass:
+- The domain context from Step 1
+- The user segments discovered in Step 2
+- The workspace path for output
 
-1. **Persona card**: Name, role, goal, context, technical level
-2. **Journey steps**: What the user does, step by step, from trigger to outcome
-3. **Pain points per step**: Where they struggle, get frustrated, or make mistakes
-4. **Emotional arc**: Where are they confident vs confused vs anxious?
+This produces persona cards with empathy maps saved to `studio/changes/{domain-slug}/personas/`.
 
-Use the Agent tool with the product-manager.md role definition. Give it:
-- The events discovered in Step 2
-- The instruction: "Map the user journey for each persona, marking pain points at each step"
+Present personas to the user for validation before proceeding.
+
+## Step 4: Map User Journeys
+
+Invoke the **journey-map** skill for each persona's primary scenario. Pass:
+- The persona card from Step 3
+- The events from Step 2
+- The workspace path for output
+
+This produces journey maps saved to `studio/changes/{domain-slug}/journeys/`.
 
 Present journey maps to the user. Ask: "Does this match your experience? What's missing?"
 
-## Step 4: Identify Hotspots
+## Step 5: Model Processes
 
-Synthesize events and journeys to find **hotspots** — areas with concentrated pain, high frequency, or high stakes.
+Invoke the **process-flow** skill for each major business process identified. Pass:
+- The events from Step 2
+- The actors from persona cards
+- The workspace path for output
+
+This produces process flow diagrams saved to `studio/changes/{domain-slug}/processes/`.
+
+Decision points and parallel branches are **natural boundaries for skill splitting** — note this for the next skill (domain-model).
+
+## Step 6: Identify Hotspots
+
+Synthesize all artifacts (events, personas, journeys, processes) to find **hotspots** — areas with concentrated pain, high frequency, or high stakes.
 
 For each hotspot:
 - **ID**: `HS-1`, `HS-2`, etc.
 - **Description**: What's going wrong or could be better
-- **Evidence**: Which events and journey pain points point here
+- **Evidence**: Which events, journey pain points, and process bottlenecks point here
 - **Severity**: High (daily impact, significant cost) / Medium (weekly friction) / Low (occasional annoyance)
 - **Type**: Efficiency (too slow), Accuracy (error-prone), Knowledge (hard to find info), Integration (tools don't talk), Compliance (regulatory risk)
 
 Rank hotspots by severity. Present to the user: "These are the biggest opportunities. Do you agree with the ranking?"
 
-## Step 5: Model Processes
+## Step 7: Write Output
 
-Organize the events into **time-ordered process flows**. For each major process:
-
-1. **Trigger**: What starts this process?
-2. **Steps**: Events in sequence, with actors
-3. **Decision points**: Where does someone need to make a choice? (Mark with ◇)
-4. **Parallel branches**: What can happen simultaneously?
-5. **End state**: What's the successful outcome?
-
-Format as a text flow diagram:
-
-```
-[Trigger] → Event A → Event B → ◇ Decision
-                                    ├→ Path 1 → Event C → [Done]
-                                    └→ Path 2 → Event D → Event E → [Done]
-```
-
-Decision points and parallel branches are **natural boundaries for skill splitting** — note this for the next skill (domain-model).
-
-## Step 6: Write Output
-
-Create the workspace and save results:
+Create the workspace and save results. By this point the artifact skills have already created subdirectories:
 
 ```
 studio/changes/{domain-slug}/
-├── event-storm.md       # full brainstorming output
-└── status.json          # { phase: "planning" }
+├── event-storm.md       # synthesized brainstorming output
+├── status.json          # { type: "domain", phase: "planning" }
+├── personas/            # created by persona-insight skill
+│   ├── {persona-1}.md
+│   └── {persona-2}.md
+├── journeys/            # created by journey-map skill
+│   └── {persona-scenario}.md
+└── processes/           # created by process-flow skill
+    └── {process-name}.md
 ```
 
 **Derive `{domain-slug}`** from the domain description: lowercase, kebab-case, 2-3 words (e.g., "children-health", "trading-ops").
@@ -128,20 +134,16 @@ Write `event-storm.md` with the following sections:
 ## Domain Context
 {Summary from Step 1}
 
-## Personas
-{Persona cards from Step 3}
-
-## User Journeys
-{Journey maps from Step 3}
-
 ## Events
 {Categorized event list from Step 2}
 
-## Hotspots
-{Ranked hotspot list from Step 4}
+## Artifacts Produced
+- Personas: see `personas/` directory
+- User Journeys: see `journeys/` directory
+- Process Flows: see `processes/` directory
 
-## Process Flows
-{Flow diagrams from Step 5}
+## Hotspots
+{Ranked hotspot list from Step 6}
 
 ## Decision Points
 {List of all ◇ decision points — these inform skill boundaries}

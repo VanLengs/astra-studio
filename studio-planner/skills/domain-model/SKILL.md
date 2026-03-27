@@ -21,10 +21,10 @@ Consult `${CLAUDE_SKILL_DIR}/../../references/plugin-architecture-guide.md` for 
 ## Workflow
 
 1. **Cluster events** — group related events into business domains
-2. **Draw boundaries** — define what each domain owns
-3. **Classify domains** — core vs supporting vs generic
-4. **Map relationships** — how domains interact
-5. **Propose plugins** — translate domains into plugin candidates
+2. **Build domain canvas** — invoke `domain-canvas` skill to define boundaries, classify, and map relationships
+3. **Build behavior matrix** — invoke `behavior-matrix` skill to cross-reference actors, actions, events, and data
+4. **Propose plugins** — translate domains into plugin candidates
+5. **Assess opportunities** — invoke `opportunity-brief` skill to prioritize
 6. **Write output** — save domain map to the workspace
 
 ## Step 1: Cluster Events
@@ -39,55 +39,33 @@ Guidelines for clustering:
 
 Present the clusters to the user: "I see these natural groupings — does this match how you think about your business?"
 
-## Step 2: Draw Boundaries
+## Step 2: Build Domain Canvas
 
-For each domain cluster, define:
+Invoke the **domain-canvas** skill with the domain workspace path. Pass:
+- The event clusters from Step 1
+- The workspace path for output
 
-- **Name**: 2-3 words, plain language (e.g., "Meal Planning", "Exercise Tracking", "Progress Reports")
-- **Owns**: What events, data, and decisions belong exclusively to this domain
-- **Does NOT own**: What's explicitly out of scope (prevents scope creep)
-- **Key actors**: Who interacts with this domain
+This produces `studio/changes/{domain}/domain-canvas.md` with:
+- Domain boundary definitions (what each domain owns and doesn't)
+- Classifications (core / supporting / generic)
+- Relationship map between domains
+- Build strategy recommendations
 
-The boundary test: "If I removed this domain entirely, would the other domains still make sense on their own?" If not, the boundaries are wrong.
+Present the domain canvas to the user for validation before proceeding.
 
-## Step 3: Classify Domains
+## Step 3: Build Behavior Matrix
 
-Use the **architect** perspective to classify each domain:
+Invoke the **behavior-matrix** skill with the domain workspace path. Pass:
+- The events, personas, and processes from event-storm artifacts
+- The workspace path for output
 
-| Classification | Meaning | Plugin strategy |
-|---------------|---------|-----------------|
-| **Core** | This is the unique value — what makes the product special | Custom plugin, invest heavily in skill quality |
-| **Supporting** | Necessary but not differentiating — supports core domains | Add-on plugin, simpler skills, adequate quality |
-| **Generic** | Standard capability available everywhere | Use existing tools (MCP servers, built-in Claude features), no custom plugin |
+This produces `studio/changes/{domain}/behavior-matrix.md` with:
+- Actor × Action × Event × Data cross-reference
+- Data entity ownership map
+- Gap analysis
+- Automation opportunities and skill mapping hints
 
-Ask the user to validate classifications: "I think {domain} is your core capability because... Do you agree?"
-
-Generic domains should map to existing solutions:
-- Data persistence → MCP filesystem or database server
-- Web research → MCP web-search
-- GitHub integration → MCP GitHub server
-- Communication → MCP Slack server
-
-## Step 4: Map Relationships
-
-Define how the non-generic domains interact:
-
-| Relationship | Meaning | Plugin implication |
-|-------------|---------|-------------------|
-| **Feeds into** | Domain A produces data that B consumes | B depends on A; consider A as core |
-| **Shares data** | Both domains read/write the same data | Shared templates/references, or one owns the data |
-| **Independent** | Domains don't interact | Separate plugins, no dependency |
-| **Orchestrates** | One domain coordinates multiple others | The orchestrator is likely the core plugin |
-
-Draw the relationship map:
-
-```
-[Meal Planning] ──feeds into──→ [Shopping List]
-       │                              │
-       └──shares data──→ [Nutrition Tracking] ←──independent──→ [Exercise Tracking]
-```
-
-## Step 5: Propose Plugins
+## Step 4: Propose Plugins
 
 Translate each non-generic domain into a plugin candidate:
 
@@ -107,6 +85,19 @@ Decide the collection structure:
 
 Present to the user for validation. This is a key decision point — the user should explicitly approve the plugin structure before proceeding.
 
+## Step 5: Assess Opportunities
+
+Invoke the **opportunity-brief** skill with the domain workspace path. Pass:
+- All prior artifacts (event-storm, personas, journeys, domain-canvas, behavior-matrix)
+- The plugin candidates from Step 4
+
+This produces `studio/changes/{domain}/opportunity-brief.md` with:
+- Impact × Feasibility scoring for each plugin candidate
+- Priority ranking with rationale
+- Effort estimates and dependency notes
+
+Present the opportunity assessment to the user. They may reorder priorities based on business constraints.
+
 ## Step 6: Write Output
 
 Write `studio/changes/{name}/domain-map.md`:
@@ -116,26 +107,17 @@ Write `studio/changes/{name}/domain-map.md`:
 
 > Date: {YYYY-MM-DD}
 
-## Business Domains
-
-### {Domain 1 Name}
-- **Classification**: Core / Supporting / Generic
-- **Owns**: {events, data, decisions}
-- **Does not own**: {explicit exclusions}
-- **Actors**: {who interacts}
-
-### {Domain 2 Name}
-...
-
-## Relationship Map
-{Text diagram from Step 4}
+## Artifacts
+- Domain Canvas: see `domain-canvas.md`
+- Behavior Matrix: see `behavior-matrix.md`
+- Opportunity Brief: see `opportunity-brief.md`
 
 ## Plugin Candidates
 
-| Plugin | Domain | Role | Description | Dependencies |
-|--------|--------|------|-------------|-------------|
-| {name} | {domain} | core | {desc} | — |
-| {name} | {domain} | add-on | {desc} | {core-name} |
+| Plugin | Domain | Role | Description | Dependencies | Priority |
+|--------|--------|------|-------------|-------------|----------|
+| {name} | {domain} | core | {desc} | — | 1 |
+| {name} | {domain} | add-on | {desc} | {core-name} | 2 |
 
 ## Generic Capabilities (no custom plugin needed)
 - {capability} → {existing solution}
