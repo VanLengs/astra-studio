@@ -169,7 +169,7 @@ skills/
 
 ## SKILL.md Skeleton Format
 
-When producing skeletons for a skill authoring tool to flesh out:
+When producing skeletons for `skill-creator` to flesh out:
 
 ```markdown
 ---
@@ -184,7 +184,7 @@ user-invocable: true
 {2-3 sentence summary: what it does, when to use it, what it produces.}
 
 ## Intent
-- {What should this skill enable Claude to do?}
+- {What should this skill enable the agent to do?}
 - {When should this skill trigger?}
 
 ## Expected Inputs
@@ -204,7 +204,7 @@ user-invocable: true
 - {What this skill explicitly does NOT do}
 ```
 
-This skeleton gives a skill authoring tool enough context to:
+This skeleton gives `skill-creator` enough context to:
 1. Write full instructions
 2. Design evals
 3. Create helper scripts if needed

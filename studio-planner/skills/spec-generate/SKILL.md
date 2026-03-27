@@ -87,7 +87,7 @@ user-invocable: true
 {2-3 sentence summary: what it does, when to use it, what it produces.}
 
 ## Intent
-- {What this skill enables Claude to do}
+- {What this skill enables the agent to do}
 - {When this skill should trigger}
 
 ## Expected Inputs
