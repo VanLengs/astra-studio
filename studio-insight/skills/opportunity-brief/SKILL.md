@@ -9,7 +9,17 @@ user-invocable: true
 
 Produce a structured opportunity assessment that ranks plugin opportunities by impact and feasibility, with clear reasoning for what to build first. Designed for decision-makers — concise, evidence-based, actionable.
 
-Read `${CLAUDE_SKILL_DIR}/../../agents/product-manager.md` for the PM perspective on prioritization.
+## Expert Discovery
+
+This skill uses **dynamic expert loading**. On every run:
+
+1. **Primary role**: Always load `product-manager.md` (leads prioritization)
+2. **Scan project experts**: Glob `studio/agents/*.md` — load all custom experts the team has created
+3. **Scan built-in experts**: Glob `${CLAUDE_SKILL_DIR}/../../agents/*.md` — load shipped experts (skip any already loaded from project)
+4. **Match by relevance**: From the loaded experts, select those relevant to the current domain context. Match by comparing the expert's `## Your Domain` section and title against the user's input topic. Include 1-3 most relevant domain experts.
+5. **Skip template**: Do not load `_domain-expert-template.md` — it's for creating new experts, not for consultation.
+
+The primary role produces the initial artifact. Domain experts review and correct it in the Expert Review step.
 
 ## Inputs
 
@@ -26,8 +36,9 @@ The more prior artifacts exist, the more evidence-based the assessment.
 3. **Score** — rate impact and feasibility
 4. **Estimate effort** — rough complexity and timeline indicators
 5. **Rank and recommend** — prioritized list with rationale
-6. **Validate** — present to user
-7. **Write output** — save opportunity brief
+6. **Expert review** — domain experts validate feasibility and impact scores
+7. **Validate** — present to user
+8. **Write output** — save opportunity brief
 
 ## Step 1: Collect Evidence
 
@@ -137,7 +148,24 @@ Recommendation:
 
 Include a **dependency note** if candidates depend on each other (e.g., "AI 营养顾问 needs meal-log data from 快速饮食记录").
 
-## Step 6: Validate
+## Step 6: Expert Review
+
+If domain experts were discovered in Expert Discovery, use the Agent tool to have each relevant expert review the opportunity assessment.
+
+Give each expert subagent:
+- Their agent definition (.md file content)
+- The draft opportunity brief (candidates, scores, ranking)
+- The instruction: "Review this opportunity assessment from your domain expertise. For each candidate, evaluate: is the impact score realistic given domain constraints? Is the feasibility score accurate — are there domain-specific barriers we missed? Are there opportunities we overlooked that are obvious to a domain expert? Should any candidate be higher or lower priority based on your knowledge?"
+
+Incorporate corrections. Common improvements from domain experts:
+- Feasibility scores adjusted down due to regulatory barriers or domain complexity
+- Impact scores adjusted up for candidates that address safety-critical pain points
+- New opportunities that only a specialist would recognize
+- Effort estimates corrected based on domain knowledge requirements
+
+If no relevant domain experts were found, skip this step.
+
+## Step 7: Validate
 
 Present the ranking to the user:
 - "Do you agree with the impact and feasibility scores?"
@@ -146,7 +174,7 @@ Present the ranking to the user:
 
 The user may override scores based on factors not visible in the data (e.g., "investors want to see the meal planning feature first").
 
-## Step 7: Write Output
+## Step 8: Write Output
 
 If working within a studio workspace:
 ```

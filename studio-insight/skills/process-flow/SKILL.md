@@ -9,7 +9,17 @@ user-invocable: true
 
 Produce a business process flow that shows how work actually happens — who does what, in what order, where decisions are made, and where things can happen in parallel. Designed for clarity, not technical notation.
 
-Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` for the architect perspective on system boundaries and data flow.
+## Expert Discovery
+
+This skill uses **dynamic expert loading**. On every run:
+
+1. **Primary role**: Always load `architect.md` (leads process design)
+2. **Scan project experts**: Glob `studio/agents/*.md` — load all custom experts the team has created
+3. **Scan built-in experts**: Glob `${CLAUDE_SKILL_DIR}/../../agents/*.md` — load shipped experts (skip any already loaded from project)
+4. **Match by relevance**: From the loaded experts, select those relevant to the current domain context. Match by comparing the expert's `## Your Domain` section and title against the user's input topic. Include 1-3 most relevant domain experts.
+5. **Skip template**: Do not load `_domain-expert-template.md` — it's for creating new experts, not for consultation.
+
+The primary role produces the initial artifact. Domain experts review and correct it in the Expert Review step.
 
 ## Inputs
 
@@ -25,8 +35,9 @@ Accept one of:
 4. **Mark decision points** — where does the flow branch?
 5. **Identify parallelism** — what can happen simultaneously?
 6. **Assign actors** — who or what performs each step?
-7. **Validate** — present to user
-8. **Write output** — save process flow document
+7. **Expert review** — domain experts verify process accuracy
+8. **Validate** — present to user
+9. **Write output** — save process flow document
 
 ## Step 1: Define Scope
 
@@ -124,7 +135,24 @@ Actor types:
 - **AI**: Claude-powered analysis or generation
 - **External**: Third-party service or API
 
-## Step 7: Validate
+## Step 7: Expert Review
+
+If domain experts were discovered in Expert Discovery, use the Agent tool to have each relevant expert review the process flow.
+
+Give each expert subagent:
+- Their agent definition (.md file content)
+- The draft process flow (events, decisions, actors, parallel branches)
+- The instruction: "Review this business process from your domain expertise. Flag: steps that are out of order or missing, decision conditions that are wrong, actors assigned to the wrong steps, exception paths not accounted for, and regulatory or safety checkpoints that must be included."
+
+Incorporate corrections. Common improvements from domain experts:
+- Missing steps that are invisible to outsiders but critical in practice
+- Decision conditions that are more nuanced than the architect assumed
+- Regulatory checkpoints that must happen at specific points
+- Exception paths that happen frequently but weren't modeled
+
+If no relevant domain experts were found, skip this step.
+
+## Step 8: Validate
 
 Present the complete process flow to the user:
 - "Does this match how it actually works (or should work)?"
@@ -132,7 +160,7 @@ Present the complete process flow to the user:
 - "Are the decision conditions correct?"
 - "Are the actor assignments right?"
 
-## Step 8: Write Output
+## Step 9: Write Output
 
 If working within a studio workspace:
 ```

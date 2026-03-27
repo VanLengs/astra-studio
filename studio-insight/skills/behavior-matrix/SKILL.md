@@ -9,7 +9,17 @@ user-invocable: true
 
 Produce a behavior matrix — a comprehensive cross-reference table showing every actor, the actions they perform, the events those actions trigger, and the data that flows between them. Reveals gaps, redundancies, and automation opportunities.
 
-Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` for the system perspective.
+## Expert Discovery
+
+This skill uses **dynamic expert loading**. On every run:
+
+1. **Primary role**: Always load `architect.md` (leads system analysis)
+2. **Scan project experts**: Glob `studio/agents/*.md` — load all custom experts the team has created
+3. **Scan built-in experts**: Glob `${CLAUDE_SKILL_DIR}/../../agents/*.md` — load shipped experts (skip any already loaded from project)
+4. **Match by relevance**: From the loaded experts, select those relevant to the current domain context. Match by comparing the expert's `## Your Domain` section and title against the user's input topic. Include 1-3 most relevant domain experts.
+5. **Skip template**: Do not load `_domain-expert-template.md` — it's for creating new experts, not for consultation.
+
+The primary role produces the initial artifact. Domain experts review and correct it in the Expert Review step.
 
 ## Inputs
 
@@ -25,8 +35,9 @@ Accept one of:
 4. **Trace data** — what data flows in and out
 5. **Build matrix** — cross-reference everything
 6. **Analyze** — identify patterns, gaps, and opportunities
-7. **Validate** — present to user
-8. **Write output** — save matrix document
+7. **Expert review** — domain experts verify completeness
+8. **Validate** — present to user
+9. **Write output** — save matrix document
 
 ## Step 1: Enumerate Actors
 
@@ -137,14 +148,31 @@ Each row in the matrix can potentially map to a plugin skill:
 - AI actions → auto-triggered or invocable skills
 - System actions → hook-triggered or scheduled tasks
 
-## Step 7: Validate
+## Step 7: Expert Review
+
+If domain experts were discovered in Expert Discovery, use the Agent tool to have each relevant expert review the behavior matrix.
+
+Give each expert subagent:
+- Their agent definition (.md file content)
+- The draft behavior matrix (actors, actions, events, data flows) and analysis
+- The instruction: "Review this behavior matrix from your domain expertise. Flag: actors or actions that are missing, events that are mislabeled or have wrong triggers, data entities with incorrect ownership, and gaps in the matrix that reveal missing functionality. Also check the automation opportunities — are they realistic given domain constraints?"
+
+Incorporate corrections. Common improvements from domain experts:
+- Actions that only a domain practitioner would know about
+- Data entities with compliance or safety implications that affect ownership
+- Automation opportunities that are infeasible due to domain constraints
+- Missing actors (regulatory bodies, external partners, caregivers)
+
+If no relevant domain experts were found, skip this step.
+
+## Step 8: Validate
 
 Present the matrix and analysis to the user:
 - "Is this complete? Any missing actors or actions?"
 - "Are the data flows correct?"
 - "Do the automation opportunities make sense?"
 
-## Step 8: Write Output
+## Step 9: Write Output
 
 If working within a studio workspace:
 ```

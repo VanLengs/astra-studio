@@ -9,7 +9,17 @@ user-invocable: true
 
 Produce a professional user journey map that traces a specific persona through a real workflow — from trigger to outcome. Captures what the user does, how they feel, where they struggle, and where plugin opportunities exist.
 
-Read `${CLAUDE_SKILL_DIR}/../../agents/product-manager.md` for the PM perspective that guides journey analysis.
+## Expert Discovery
+
+This skill uses **dynamic expert loading**. On every run:
+
+1. **Primary role**: Always load `product-manager.md` (leads journey analysis)
+2. **Scan project experts**: Glob `studio/agents/*.md` — load all custom experts the team has created
+3. **Scan built-in experts**: Glob `${CLAUDE_SKILL_DIR}/../../agents/*.md` — load shipped experts (skip any already loaded from project)
+4. **Match by relevance**: From the loaded experts, select those relevant to the current domain context. Match by comparing the expert's `## Your Domain` section and title against the user's input topic. Include 1-3 most relevant domain experts.
+5. **Skip template**: Do not load `_domain-expert-template.md` — it's for creating new experts, not for consultation.
+
+The primary role produces the initial artifact. Domain experts review and correct it in the Expert Review step.
 
 ## Inputs
 
@@ -25,8 +35,9 @@ If a persona card exists at `studio/changes/{name}/personas/{persona}.md`, read 
 2. **Map stages** — break the journey into phases
 3. **Detail each stage** — actions, touchpoints, thoughts, emotions
 4. **Identify pain points and opportunities** — where to intervene
-5. **Validate** — present to user
-6. **Write output** — save journey map document
+5. **Expert review** — domain experts verify journey accuracy
+6. **Validate** — present to user
+7. **Write output** — save journey map document
 
 ## Step 1: Define Scope
 
@@ -100,7 +111,24 @@ For each pain point found in the journey:
 
 Mark which opportunities could become **plugin skills**.
 
-## Step 5: Validate
+## Step 5: Expert Review
+
+If domain experts were discovered in Expert Discovery, use the Agent tool to have each relevant expert review the journey map.
+
+Give each expert subagent:
+- Their agent definition (.md file content)
+- The draft journey map (stages, pain points, emotions)
+- The instruction: "Review this user journey from your domain expertise. Flag: steps that don't match real-world practice, pain points that are missing or mischaracterized, touchpoints that are wrong for this domain, and opportunities we overlooked."
+
+Incorporate corrections. Common improvements from domain experts:
+- Steps that actually happen differently in practice
+- Pain points that are more severe (or less severe) than the PM estimated
+- Domain-specific constraints the PM wouldn't know (e.g., regulatory checkpoints, safety procedures)
+- Opportunities that only a domain specialist would see
+
+If no relevant domain experts were found, skip this step.
+
+## Step 6: Validate
 
 Present the complete journey map to the user:
 - "Does this journey reflect real user behavior?"
@@ -108,7 +136,7 @@ Present the complete journey map to the user:
 - "Is the emotional curve accurate?"
 - "Which opportunities feel most impactful?"
 
-## Step 6: Write Output
+## Step 7: Write Output
 
 If working within a studio workspace:
 ```

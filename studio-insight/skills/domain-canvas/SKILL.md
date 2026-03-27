@@ -9,7 +9,17 @@ user-invocable: true
 
 Produce a domain canvas — a visual map of business domains, their roles, boundaries, and interactions. Helps decide what deserves a custom plugin (core), what's supporting, and what can use off-the-shelf tools.
 
-Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` for the architect perspective on boundaries and dependencies.
+## Expert Discovery
+
+This skill uses **dynamic expert loading**. On every run:
+
+1. **Primary role**: Always load `architect.md` (leads domain analysis)
+2. **Scan project experts**: Glob `studio/agents/*.md` — load all custom experts the team has created
+3. **Scan built-in experts**: Glob `${CLAUDE_SKILL_DIR}/../../agents/*.md` — load shipped experts (skip any already loaded from project)
+4. **Match by relevance**: From the loaded experts, select those relevant to the current domain context. Match by comparing the expert's `## Your Domain` section and title against the user's input topic. Include 1-3 most relevant domain experts.
+5. **Skip template**: Do not load `_domain-expert-template.md` — it's for creating new experts, not for consultation.
+
+The primary role produces the initial artifact. Domain experts review and correct it in the Expert Review step.
 
 ## Inputs
 
@@ -24,8 +34,9 @@ Accept one of:
 3. **Classify** — core vs supporting vs generic
 4. **Map relationships** — how domains interact
 5. **Draw canvas** — produce the visual domain map
-6. **Validate** — present to user
-7. **Write output** — save domain canvas document
+6. **Expert review** — domain experts verify boundaries and classifications
+7. **Validate** — present to user
+8. **Write output** — save domain canvas document
 
 ## Step 1: Discover Domains
 
@@ -137,7 +148,24 @@ Produce the domain canvas as a visual map:
 └──────────────────────────────────────────────────┘
 ```
 
-## Step 6: Validate
+## Step 6: Expert Review
+
+If domain experts were discovered in Expert Discovery, use the Agent tool to have each relevant expert review the domain canvas.
+
+Give each expert subagent:
+- Their agent definition (.md file content)
+- The draft domain canvas (domains, boundaries, classifications, relationships)
+- The instruction: "Review this domain model from your expertise. Flag: domains that are split wrong (things that belong together are separated, or vice versa), classifications that are wrong (something marked generic that's actually core, or vice versa), relationships that are missing or incorrect, and boundary definitions that don't match how the domain actually works."
+
+Incorporate corrections. Common improvements from domain experts:
+- Domains that outsiders lump together but practitioners know are distinct
+- Capabilities classified as generic that actually need domain-specific logic
+- Relationships that are tighter (or looser) than the architect assumed
+- Boundary definitions that use the wrong terminology
+
+If no relevant domain experts were found, skip this step.
+
+## Step 7: Validate
 
 Present the canvas to the user:
 - "Does this domain structure match your mental model?"
@@ -145,7 +173,7 @@ Present the canvas to the user:
 - "Are the relationships correct?"
 - "Is anything missing?"
 
-## Step 7: Write Output
+## Step 8: Write Output
 
 If working within a studio workspace:
 ```
