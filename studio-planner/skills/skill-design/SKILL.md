@@ -1,0 +1,157 @@
+---
+name: skill-design
+description: Design the skill breakdown for a plugin — enumerate skills, map data flow, assess complexity, and plan implementation. Use after domain-model when you have plugin candidates and need to decide what individual skills each plugin should contain. Produces a skill map with dependencies and complexity tiers.
+allowed-tools: Read, Write, Glob, Grep, Agent
+user-invocable: true
+---
+
+# Skill Design
+
+Break a plugin down into individual skills with clear responsibilities, data flow, and complexity assessment.
+
+Consult `${CLAUDE_SKILL_DIR}/../../references/skill-decomposition-guide.md` for split/merge rules, naming conventions, and complexity tiers.
+
+## Pre-check
+
+1. Verify `studio/` exists.
+2. If `$ARGUMENTS` is a plugin name, read `studio/changes/$ARGUMENTS/domain-map.md` (or the parent domain's `domain-map.md` that references this plugin).
+3. If no domain-map.md exists, this skill can work from a user description — but recommend running event-storm and domain-model first for better results.
+4. Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` — the architect perspective leads skill design.
+
+## Workflow
+
+1. **Identify capabilities** — what should this plugin be able to do?
+2. **Group into skills** — apply single-responsibility principle
+3. **Define interfaces** — inputs, outputs, and boundaries for each skill
+4. **Map data flow** — how do skills connect?
+5. **Assess complexity** — what does each skill need to work?
+6. **Write output** — save skill map to the workspace
+
+## Step 1: Identify Capabilities
+
+List everything the plugin should be able to do. Sources:
+- `domain-map.md`: the events and responsibilities assigned to this plugin's domain
+- `event-storm.md`: the process flows and decision points within this domain
+- User input: additional capabilities they want
+
+Express each capability as a **user action**: "As [persona], I want to [action] so that [outcome]".
+
+## Step 2: Group into Skills
+
+Apply the single-responsibility principle to group capabilities into skills.
+
+**Split when:**
+- The capability serves a different persona
+- There's a user decision point between two sub-tasks
+- The description needs "and" to join unrelated actions
+- Different capabilities need different tool access (e.g., one needs Bash, another only needs Read)
+
+**Merge when:**
+- Two capabilities always run in sequence with no user review between them
+- One capability's only purpose is to feed the next
+- A capability is too small to stand alone (1-2 trivial steps)
+
+**Naming**: kebab-case, verb-noun pattern preferred. Be specific enough for Claude's trigger matching:
+- Good: `generate-meal-plan`, `analyze-nutrition`, `track-progress`
+- Bad: `process-data`, `do-stuff`, `helper`
+
+## Step 3: Define Interfaces
+
+For each skill, specify:
+
+| Field | Description |
+|-------|-------------|
+| **Inputs** | What data the skill receives (files, arguments, context) |
+| **Outputs** | What the skill produces (files, terminal output, side effects) |
+| **Out of scope** | What this skill explicitly does NOT do |
+| **Preconditions** | What must be true before this skill runs |
+
+This prevents scope creep and makes dependencies explicit.
+
+## Step 4: Map Data Flow
+
+Show how skills connect:
+
+```
+[generate-meal-plan]
+    │ produces: meal-plan.json
+    ▼
+[analyze-nutrition]
+    │ produces: nutrition-report.md
+    ▼
+[track-progress] ←── [import-measurements] (parallel, independent)
+    │ produces: progress-dashboard.md
+    ▼
+[generate-weekly-summary]
+```
+
+Rules:
+- No circular dependencies
+- Data flows in one direction (pipeline or fan-out)
+- Independent skills can run in parallel
+- Orchestration is handled by commands, not hard-wired into skills
+
+Mark which connections are **required** (skill B cannot run without A's output) vs **optional** (skill B can use A's output if available, but also works standalone).
+
+## Step 5: Assess Complexity
+
+For each skill, classify into an implementation tier:
+
+| Tier | Characteristics | allowed-tools | Structure |
+|------|-----------------|---------------|-----------|
+| **Simple** | Prompt instructions only, no computation | Read, Write, Glob | SKILL.md + references/ |
+| **Moderate** | Needs helper scripts for data processing or validation | Read, Write, Bash, Glob, Grep | SKILL.md + scripts/ |
+| **Script-heavy** | Significant automation, data transformation | Read, Write, Bash, Glob, Grep, Edit | SKILL.md + scripts/ + references/ |
+| **MCP-dependent** | Requires external service access | + MCP tools | SKILL.md + scripts/ + .mcp.json |
+
+Also note:
+- Does this skill need to invoke subagents? (multi-perspective analysis)
+- Does this skill need web access? (research, API calls)
+- Does this skill need file system access beyond the project? (MCP filesystem)
+
+## Step 6: Write Output
+
+Write `studio/changes/{plugin-name}/skill-map.md`:
+
+```markdown
+# Skill Map: {plugin-name}
+
+> Date: {YYYY-MM-DD}
+
+## Skills
+
+### {skill-name}
+- **Description**: {one sentence — specific, action-oriented}
+- **Inputs**: {what it receives}
+- **Outputs**: {what it produces}
+- **Out of scope**: {what it does NOT do}
+- **Complexity**: {Simple / Moderate / Script-heavy / MCP-dependent}
+- **allowed-tools**: {comma-separated list}
+- **Preconditions**: {what must be true}
+
+### {skill-name-2}
+...
+
+## Data Flow
+{Flow diagram from Step 4}
+
+## Complexity Summary
+
+| Skill | Tier | Scripts needed | MCP needed |
+|-------|------|---------------|------------|
+| {name} | Simple | — | — |
+| {name} | Moderate | data_processor.py | — |
+| {name} | MCP-dependent | — | web-search |
+
+## Implementation Order
+{Recommended order to build skills, based on dependencies}
+1. {skill-a} — no dependencies, can start immediately
+2. {skill-b} — depends on skill-a's output format
+3. {skill-c} — depends on skill-b
+```
+
+Update `studio/changes/{plugin-name}/status.json`:
+- Add each skill with status `draft`
+- Keep phase as `planning`
+
+Tell the user: "Skill design complete. Run `/studio-planner:spec-generate {plugin-name}` to generate all specification files, or run `/skill-creator` directly on any skill to start building."
