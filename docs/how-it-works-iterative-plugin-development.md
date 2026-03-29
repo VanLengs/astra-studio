@@ -1,39 +1,39 @@
-# How It Works: Iterative Plugin Development
+# 工作机制：迭代式插件开发
 
-This document walks through a detailed, end-to-end simulation of iterative plugin development with Astra Studio.
+本文档详细模拟 Astra Studio 中一次完整的迭代式插件开发流程。
 
-It uses a realistic domain inspired by `course-workshop-plugins` and shows how the workspace evolves from `init` through planning, building, validation, promotion, and a second iteration of change.
+示例领域参考 `course-workshop-plugins`，展示从 `init` 到规划、构建、校验、发布，再到第二轮迭代变更时，工作区是如何演化的。
 
-## Scope
+## 文档范围
 
-This document focuses on:
+本文重点说明：
 
-- How `studio/changes/` evolves across phases
-- How domain workspaces and plugin workspaces differ
-- How `target_dir` acts as the single source of truth for implementation
-- How shipped design history moves into `studio/archive/`
-- How iterative `create` and `modify` flows differ
+- `studio/changes/` 在各阶段如何变化
+- 域工作区与插件工作区的区别
+- `target_dir` 如何作为实现的单一事实源
+- 已交付的设计记录如何进入 `studio/archive/`
+- `create` 与 `modify` 两类迭代路径的差异
 
-This document also uses the clarified interaction model:
+本文也采用当前已经澄清的交互模型：
 
-- Users confirm at major workflow boundaries
-- The system executes the internal steps automatically
-- Built-in capabilities such as `skill-creator` are treated as internal execution steps, not user-run commands
+- 用户只在关键阶段边界进行确认
+- 系统自动执行阶段内部步骤
+- `skill-creator` 这类内置能力视为系统内部执行步骤，而不是用户手动运行的命令
 
-## Core Model
+## 核心模型
 
-### Design vs implementation
+### 设计与实现分离
 
-`studio/changes/` is the active design workspace.
+`studio/changes/` 是活跃设计工作区。
 
-It contains:
+其中保存：
 
-- domain artifacts such as `event-storm.md`, `domain-map.md`, `changelog.md`
-- plugin design artifacts such as `skill-map.md`, `brief.md`, `plugin.json.draft`, `status.json`
+- 域级工件，例如 `event-storm.md`、`domain-map.md`、`changelog.md`
+- 插件级设计工件，例如 `skill-map.md`、`brief.md`、`plugin.json.draft`、`status.json`
 
-It does not contain runnable implementation files.
+它不保存可执行实现文件。
 
-Implementation lives directly in each plugin's `target_dir` and is the single source of truth:
+实现直接保存在各插件的 `target_dir` 中，并且是单一事实源：
 
 - `skills/*/SKILL.md`
 - `commands/*.md`
@@ -41,54 +41,55 @@ Implementation lives directly in each plugin's `target_dir` and is the single so
 - `hooks/`
 - `.mcp.json`
 
-### Confirmation vs execution
+### 确认与执行分离
 
-The workflow has confirmation gates, but the system executes the steps.
+整个流程有阶段确认点，但执行动作由系统完成。
 
-Examples:
+例如：
 
-- The user confirms event storm results before moving to domain modeling
-- The user confirms plugin boundaries before skill design
-- The user confirms the skill breakdown before build starts
+- 用户在 event-storm 结束后确认领域发现结果
+- 用户在 domain-model 结束后确认插件边界
+- 用户在 skill-design 结束后确认 skill 拆分
+- 用户在进入 build 阶段前确认构建范围
 
-After confirmation, the system continues automatically:
+确认之后，系统继续自动执行：
 
-- generate specs
-- run `build-skills`
-- invoke `skill-creator`
-- validate the plugin
-- promote approved changes
+- 生成规格
+- 执行 `build-skills`
+- 调用 `skill-creator`
+- 校验插件
+- 发布已通过校验的变更
 
-The user should not need to manually run internal skills as a normal part of the pipeline.
+用户不应该在正常流水线中手动运行这些内部 skill。
 
-## Example Domain
+## 示例领域
 
-We simulate a course workshop domain with these plugins:
-
-- `workshop-core`
-- `workshop-designer`
-- `workshop-insight`
-- `workshop-quality`
-- `workshop-resource`
-
-In iteration 2, a new plugin is added:
-
-- `workshop-feedback`
-
-For this simulation, plugin implementation lives directly at the project root, so example `target_dir` values look like:
+这里模拟一个课程工作坊领域，包含以下插件：
 
 - `workshop-core`
 - `workshop-designer`
 - `workshop-insight`
 - `workshop-quality`
 - `workshop-resource`
+
+在第二轮迭代中会新增一个插件：
+
 - `workshop-feedback`
 
-## Scenario 0: `/studio-core:init`
+本模拟采用项目根目录插件布局，因此示例中的 `target_dir` 为：
 
-The user initializes studio in the project.
+- `workshop-core`
+- `workshop-designer`
+- `workshop-insight`
+- `workshop-quality`
+- `workshop-resource`
+- `workshop-feedback`
 
-### Workspace snapshot
+## 场景 0：`/studio-core:init`
+
+用户在项目中初始化 studio。
+
+### 工作区快照
 
 ```text
 studio/
@@ -101,17 +102,17 @@ studio/
     └── .gitkeep
 ```
 
-### Notes
+### 说明
 
-- `changes/` is empty
-- `archive/` is empty
-- no plugin workspaces exist yet
+- `changes/` 为空
+- `archive/` 为空
+- 还没有任何插件工作区
 
-## Scenario 1: `/studio-planner:plan "course-workshop"` - event-storm phase
+## 场景 1：`/studio-planner:plan "course-workshop"` - event-storm 阶段
 
-The system creates a domain workspace and produces domain discovery artifacts.
+系统创建域工作区并生成领域发现产物。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -154,28 +155,28 @@ studio/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- The system discovered events, personas, journeys, and processes
-- The system wrote `event-storm.md`
-- The system created `changelog.md`
-- The domain workspace was initialized as iteration 1
+- 系统识别并整理了事件、Persona、Journey、Process
+- 系统写入 `event-storm.md`
+- 系统创建 `changelog.md`
+- 域工作区以 iteration 1 初始化
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- the domain framing
-- the roles involved
-- the hotspot ranking
+- 领域描述是否准确
+- 参与角色是否合理
+- 热点排序是否正确
 
-After confirmation, the system proceeds to domain modeling.
+确认后，系统继续进入 domain-model。
 
-## Scenario 2: domain-model phase
+## 场景 2：domain-model 阶段
 
-The system clusters the domain into plugin candidates and creates plugin change workspaces.
+系统将领域聚类为插件候选，并创建插件变更工作区。
 
-Detected plugin candidates:
+识别出的插件候选：
 
 - `workshop-core`
 - `workshop-designer`
@@ -183,7 +184,7 @@ Detected plugin candidates:
 - `workshop-quality`
 - `workshop-resource`
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -250,7 +251,7 @@ workshop-resource/
     └── .gitkeep
 ```
 
-### Example plugin workspace status
+### 插件工作区状态示例
 
 `studio/changes/workshop-designer/status.json`
 
@@ -269,7 +270,7 @@ workshop-resource/
 }
 ```
 
-### Example domain status
+### 域状态示例
 
 ```json
 {
@@ -289,28 +290,28 @@ workshop-resource/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- The system wrote domain analysis artifacts
-- The system created one plugin workspace per plugin candidate
-- Each plugin workspace started with `action: "create"`
-- Each plugin got an empty implementation scaffold in its `target_dir`
+- 系统写入了域分析相关文档
+- 系统为每个插件候选创建了一个插件工作区
+- 每个插件工作区初始都是 `action: "create"`
+- 系统在对应 `target_dir` 下建立了空脚手架
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- plugin boundaries
-- plugin responsibilities
-- collection structure
+- 插件边界是否合理
+- 插件职责是否正确
+- 整体集合结构是否合理
 
-After confirmation, the system proceeds to skill design.
+确认后，系统继续进入 skill-design。
 
-## Scenario 3: skill-design phase
+## 场景 3：skill-design 阶段
 
-The system designs skills for each plugin and records them in `skill-map.md`.
+系统为每个插件设计 skill，并写入 `skill-map.md`。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -336,7 +337,7 @@ studio/
 └── ...
 ```
 
-### Example plugin status after skill design
+### skill-design 后状态示例
 
 ```json
 {
@@ -359,29 +360,29 @@ studio/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- The system derived a skill breakdown for each plugin
-- The system recorded the design in `skill-map.md`
-- The status file now tracks which skills belong to this iteration
+- 系统为每个插件拆分了 skill
+- 系统把设计结果写进 `skill-map.md`
+- `status.json.skills` 开始记录本轮涉及的 skill
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- skill boundaries
-- data flow
-- complexity assumptions
+- skill 边界是否合理
+- 数据流是否清晰
+- 复杂度分层是否合理
 
-After confirmation, the system proceeds to build generation.
+确认后，系统继续进入 `spec-generate`。
 
-## Scenario 4: spec-generate phase
+## 场景 4：spec-generate 阶段
 
-This is where the design and implementation tracks separate.
+这是设计与实现正式分离的阶段。
 
-`spec-generate` writes design outputs into `studio/changes/`, and writes implementation skeletons into `target_dir`.
+`spec-generate` 会把设计输出写入 `studio/changes/`，把实现骨架写入 `target_dir`。
 
-### Workspace snapshot after spec generation
+### 工作区快照
 
 ```text
 studio/
@@ -418,7 +419,7 @@ studio/
     └── .gitkeep
 ```
 
-### Example implementation snapshot
+### 实现侧快照示例
 
 ```text
 workshop-designer/
@@ -445,7 +446,7 @@ workshop-designer/
     └── proposal-generate.md
 ```
 
-### Example plugin status
+### 插件状态示例
 
 ```json
 {
@@ -469,25 +470,26 @@ workshop-designer/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- `brief.md` and `plugin.json.draft` were written to the plugin change workspace
-- skill skeletons were written directly into `target_dir`
-- command files were written directly into `target_dir`
+- `brief.md` 与 `plugin.json.draft` 被写入设计工作区
+- skill 骨架直接写入 `target_dir`
+- command 文件直接写入 `target_dir`
+- 插件 phase 从 `planning` 进入 `building`
 
-### Important rule
+### 关键规则
 
-The user confirms entry into the build stage, but does not manually run `skill-creator`.
+用户在这里确认是否进入 build 阶段，但不会手动运行 `skill-creator`。
 
-That is a system step handled by the next pipeline stage.
+真正的构建动作由下一阶段完成。
 
-## Scenario 5: build-skills phase
+## 场景 5：build-skills 阶段
 
-After the user confirms the build stage, Astra Studio runs `build-skills`.
+用户确认进入 build 阶段后，Astra Studio 自动执行 `build-skills`。
 
-`build-skills` reads the plugin workspace in `studio/changes/{plugin}/`, determines which skills are in scope for this iteration, and automatically invokes `skill-creator` against the implementation in `target_dir`.
+`build-skills` 会读取 `studio/changes/{plugin}/` 中的插件工作区，确定本轮哪些 skill 需要处理，然后在 `target_dir` 中自动调用 `skill-creator`。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -524,7 +526,7 @@ workshop-designer/
     └── ...
 ```
 
-### Example status during build
+### 构建中的状态示例
 
 ```json
 {
@@ -548,21 +550,21 @@ workshop-designer/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- Astra Studio ran `build-skills`
-- `build-skills` invoked `skill-creator` internally
-- the implementation in `target_dir` was fleshed out in place
-- the plugin remained in `phase: "building"`
-- per-skill states advanced from `draft` to `built`
+- Astra Studio 执行了 `build-skills`
+- `build-skills` 在内部调用了 `skill-creator`
+- `target_dir` 中的实现被原地充实
+- 插件仍处于 `phase: "building"`
+- 各 skill 的状态从 `draft` 推进到 `built`
 
-## Scenario 6: validate passed
+## 场景 6：validate 通过
 
-The system has already completed `build-skills` and used `skill-creator` to fill in implementation detail in `target_dir`.
+此时系统已经完成 `build-skills`，并且通过 `skill-creator` 在 `target_dir` 中补全了实现。
 
-Then the system validates the plugin by running validation against `target_dir`, and updates the matching change workspace.
+接着系统对 `target_dir` 执行校验，并回写对应插件工作区。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -599,7 +601,7 @@ workshop-designer/
     └── ...
 ```
 
-### Example status after validation
+### validate 后状态示例
 
 ```json
 {
@@ -623,28 +625,29 @@ workshop-designer/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- Validation ran against `target_dir`
-- The system looked up the matching change workspace by plugin name
-- The system updated the workspace phase to `approved`
+- 校验是针对 `target_dir` 执行的
+- 系统通过插件名找到对应的工作区
+- 系统把 in-scope skill 从 `built` 推进为 `tested`
+- 插件 phase 被推进到 `approved`
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- ship now
-- or hold for more edits
+- 是否现在发布
+- 是否继续修改后再发布
 
-If confirmed, the system promotes the plugin.
+确认后，系统可以执行 promote。
 
-## Scenario 7: promote
+## 场景 7：promote
 
-Promotion finalizes the manifest and archives only the design workspace.
+promote 会正式化 manifest，并归档设计工作区。
 
-Implementation remains where it already lives.
+实现不会被复制。
 
-### Workspace snapshot after promoting `workshop-designer`
+### Promote `workshop-designer` 后的工作区快照
 
 ```text
 studio/
@@ -679,7 +682,7 @@ workshop-designer/
     └── ...
 ```
 
-### Example archived status
+### 归档后的状态示例
 
 ```json
 {
@@ -706,31 +709,31 @@ workshop-designer/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- The production manifest was finalized in `target_dir`
-- The design workspace was moved from `studio/changes/` to `studio/archive/`
-- Implementation files were not copied
-- `changes/` became clean again for active work
+- 正式 manifest 被写入 `target_dir`
+- 设计工作区从 `studio/changes/` 被移动到 `studio/archive/`
+- 实现文件没有被复制
+- `changes/` 重新恢复干净，只保留活跃工作
 
-The same process happens for the other plugins in iteration 1.
+iteration 1 中其它插件也会依次经历相同的 promote 流程。
 
-At the end of iteration 1, `changes/` contains only the domain workspace.
+在 iteration 1 全部完成后，`changes/` 中只剩域工作区。
 
-## Scenario 8: iteration 2 starts
+## 场景 8：iteration 2 开始
 
-A new request arrives:
+一个新需求进入：
 
-- add a home-school feedback scenario
-- revise proposal generation to include a principal approval summary
+- 新增家园共育反馈场景
+- 修正 proposal 生成里缺失的园长审批摘要
 
-The user runs `/studio-planner:plan course-workshop`.
+用户运行 `/studio-planner:plan course-workshop`。
 
-### 8a. event-storm incremental mode
+### 8a. event-storm 增量模式
 
-The domain workspace already exists, so the system enters incremental mode and updates the domain artifacts in place.
+由于域工作区已存在，系统进入增量模式，并就地更新域工件。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -760,7 +763,7 @@ studio/
     └── ...
 ```
 
-### Example domain status
+### 域状态示例
 
 ```json
 {
@@ -780,7 +783,7 @@ studio/
 }
 ```
 
-### Example changelog entry
+### changelog 示例
 
 ```markdown
 ## 2026-04-10
@@ -804,27 +807,27 @@ studio/
 - `workshop-resource`: no change
 ```
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms the delta:
+用户确认增量内容：
 
-- what changed
-- which personas/journeys/processes were added
-- which plugins are impacted
+- 新增了哪些内容
+- 修正了哪些流程
+- 影响到了哪些插件
 
-After confirmation, the system proceeds to incremental domain modeling.
+确认后，系统继续进入增量 domain-model。
 
-## Scenario 8b: domain-model incremental mode
+## 场景 8b：domain-model 增量模式
 
-The system creates change workspaces only for impacted plugins:
+系统只为受影响的插件创建变更工作区：
 
 - `workshop-designer` → `modify`
 - `workshop-quality` → `modify`
 - `workshop-feedback` → `create`
 
-Unchanged shipped plugins do not reappear in `changes/`.
+未受影响、已 shipped 的插件不会重新出现在 `changes/` 中。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -852,15 +855,15 @@ studio/
 │       └── status.json
 └── archive/
     ├── workshop-core/
-    │   └── 2026-03-28-iteration-1/
-    ├── workshop-designer/
-    │   └── 2026-03-28-iteration-1/
-    ├── workshop-insight/
-    │   └── 2026-03-28-iteration-1/
-    ├── workshop-quality/
-    │   └── 2026-03-28-iteration-1/
-    └── workshop-resource/
-        └── 2026-03-28-iteration-1/
+│   │   └── 2026-03-28-iteration-1/
+│   ├── workshop-designer/
+│   │   └── 2026-03-28-iteration-1/
+│   ├── workshop-insight/
+│   │   └── 2026-03-28-iteration-1/
+│   ├── workshop-quality/
+│   │   └── 2026-03-28-iteration-1/
+│   └── workshop-resource/
+│       └── 2026-03-28-iteration-1/
 
 workshop-feedback/
 ├── skills/
@@ -869,7 +872,7 @@ workshop-feedback/
     └── .gitkeep
 ```
 
-### Example modify workspace status
+### modify 工作区状态示例
 
 ```json
 {
@@ -886,27 +889,27 @@ workshop-feedback/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- The system created new change workspaces only for impacted plugins
-- `modify` workspaces reference existing `target_dir`
-- only the new plugin got a fresh scaffold
+- 系统只为受影响插件创建了新一轮变更工作区
+- `modify` 工作区只引用已有 `target_dir`
+- 只有新插件被建立了新的 target scaffold
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- impact classification
-- which plugins are `modify`
-- which plugin is `create`
+- 影响判断是否准确
+- 哪些插件属于 `modify`
+- 哪些插件属于 `create`
 
-After confirmation, the system proceeds to incremental skill design.
+确认后，系统进入增量 skill-design。
 
-## Scenario 8c: skill-design incremental mode
+## 场景 8c：skill-design 增量模式
 
-In `modify` mode, the system reads existing implementation and produces a delta-oriented `skill-map.md`.
+在 `modify` 模式下，系统会先读取已有实现，再输出面向本轮变更的 `skill-map.md`。
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -925,7 +928,7 @@ studio/
 └── ...
 ```
 
-### Example modify status after skill design
+### skill-design 后的 modify 状态示例
 
 ```json
 {
@@ -944,36 +947,36 @@ studio/
 }
 ```
 
-### What happened
+### 系统做了什么
 
-- For `modify`, only impacted skills are listed
-- unchanged skills are not fully redescribed
-- `skill-map.md` represents the design delta for this iteration
+- 对于 `modify`，只列出本轮真正需要动的 skill
+- 未变化的 skill 不会被重新展开描述
+- `skill-map.md` 表达的是本轮的设计增量
 
-### Confirmation gate
+### 阶段确认点
 
-The user confirms:
+用户确认：
 
-- affected skills
-- new vs modified behavior
-- whether to proceed into build
+- 哪些 skill 受影响
+- 哪些是新增 skill
+- 哪些是修改已有 skill
 
-After confirmation, the system proceeds to incremental spec generation and `build-skills`.
+确认后，系统继续执行增量 `spec-generate`。
 
-## Scenario 8d: spec-generate + build-skills in modify mode
+## 场景 8d：spec-generate + build-skills（modify 模式）
 
-This is the key difference in iteration 2.
+这是 iteration 2 中最关键的差异点。
 
-Rules for `modify`:
+`modify` 规则如下：
 
-- `brief.md` is preserved and appended with an iteration update
-- `plugin.json.draft` is refreshed only in generated fields
-- existing `SKILL.md` files are not overwritten during spec generation
-- existing command files are not overwritten
-- new skills get skeletons
-- modified existing skills are passed to `build-skills`, which uses `skill-creator` for targeted updates
+- `brief.md` 保留原内容，并追加迭代更新说明
+- `plugin.json.draft` 只刷新系统生成字段
+- 现有 `SKILL.md` 在 `spec-generate` 阶段不会被覆盖
+- 现有 command 文件不会被覆盖
+- 新 skill 会生成骨架
+- 已有 skill 会交给 `build-skills`，由其调用 `skill-creator` 做原地更新
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -999,7 +1002,7 @@ studio/
     └── ...
 ```
 
-### Existing plugin implementation snapshot
+### 已有插件的实现快照
 
 ```text
 workshop-designer/
@@ -1018,7 +1021,7 @@ workshop-designer/
     └── proposal-generate.md
 ```
 
-### New plugin implementation snapshot
+### 新插件的实现快照
 
 ```text
 workshop-feedback/
@@ -1032,34 +1035,34 @@ workshop-feedback/
     └── parent-report.md
 ```
 
-### What happened
+### 系统做了什么
 
-- The existing `proposal-generate/SKILL.md` in `workshop-designer/` was preserved
-- The system did not overwrite it
-- The system passed it to `build-skills`, which invoked `skill-creator` to modify it in place
-- Existing commands in `workshop-designer/commands/` were preserved
-- New plugin `workshop-feedback` received fresh skills and commands
+- `workshop-designer/proposal-generate/SKILL.md` 被保留下来
+- `spec-generate` 没有覆盖它
+- 系统把它交给 `build-skills`，由 `build-skills` 再调用 `skill-creator` 原地修改
+- `workshop-designer/commands/` 中已有命令被保留
+- 新插件 `workshop-feedback` 获得了新的 skill 与 command 骨架，并被继续构建
 
-### Important clarification
+### 重要说明
 
-In `modify` mode, "do not overwrite" does not mean "the user must manually edit the file."
+在 `modify` 模式下，“不覆盖已有 `SKILL.md`”并不等于“用户必须手动去改文件”。
 
-It means:
+它真正的含义是：
 
-- `spec-generate` does not replace the file with a new skeleton
-- the system still uses `build-skills` and `skill-creator` to update the existing file in place
+- `spec-generate` 不会用新骨架替换已有文件
+- 但系统仍然会通过 `build-skills` 和 `skill-creator` 原地更新这个已有文件
 
-## Scenario 9: validate and promote iteration 2
+## 场景 9：validate 与 promote（iteration 2）
 
-The system validates the changed plugins and promotes them.
+系统对 iteration 2 中受影响的插件执行校验并发布。
 
-Order:
+顺序例如：
 
-- promote `workshop-feedback`
-- promote `workshop-designer`
-- promote `workshop-quality`
+- 先 promote `workshop-feedback`
+- 再 promote `workshop-designer`
+- 再 promote `workshop-quality`
 
-### Final workspace snapshot after iteration 2
+### iteration 2 完成后的最终快照
 
 ```text
 studio/
@@ -1096,7 +1099,7 @@ studio/
         └── 2026-04-10-iteration-2/
 ```
 
-### Implementation snapshot
+### 实现侧快照
 
 ```text
 workshop-designer/
@@ -1116,26 +1119,26 @@ workshop-feedback/
     └── ...
 ```
 
-### What happened
+### 系统做了什么
 
-- active plugin change workspaces were archived
-- the domain workspace remained active and cumulative
-- implementation stayed in `target_dir`
-- design history was preserved per plugin and per iteration
+- 活跃插件工作区被移动到 archive
+- 域工作区继续保留并累积领域知识
+- 实现继续留在各自的 `target_dir`
+- 设计历史按插件与迭代保留
 
-## Scenario 10: small direct implementation change
+## 场景 10：小的实现改动
 
-The user wants to change only the output format of an existing skill such as `proposal-generate`.
+用户只想修改某个已有 skill 的输出格式，例如 `proposal-generate`。
 
-This does not require a full planning iteration.
+这类改动不需要重走完整规划流程。
 
-The system or user can directly edit:
+系统或用户可以直接修改：
 
 ```text
 workshop-designer/skills/proposal-generate/SKILL.md
 ```
 
-### Workspace snapshot
+### 工作区快照
 
 ```text
 studio/
@@ -1147,45 +1150,45 @@ studio/
     └── ...
 ```
 
-### What happened
+### 系统做了什么
 
-- `studio/changes/` did not change
-- `studio/archive/` did not change
-- the implementation changed directly in `target_dir`
-- git history captures the implementation-level change
+- `studio/changes/` 没有变化
+- `studio/archive/` 没有变化
+- 变化直接发生在 `target_dir` 的实现文件中
+- 这类实现层变更由 git 历史记录
 
-## Summary Table
+## 总结表
 
-| Phase | What changes in `studio/changes/` | What changes in `target_dir` |
-|------|------------------------------------|------------------------------|
-| `init` | empty workspace created | — |
-| `event-storm` | domain workspace appears with `event-storm.md`, `changelog.md`, personas, journeys, processes | — |
-| `domain-model` | domain analysis docs appear; plugin change workspaces appear with `status.json` | `create` plugins get scaffold; `modify` plugins do not |
-| `skill-design` | `skill-map.md` appears; skill statuses enter `draft` | — |
-| `spec-generate` | `brief.md`, `plugin.json.draft`, status updates | skill skeletons and commands are generated |
-| `build-skills` | no new design docs required beyond status updates | `skill-creator` fleshes out or modifies skills in place |
-| `validate` | matching workspace moves to `approved` | validates implementation in `target_dir` |
-| `promote` | plugin workspace moves from `changes/` to `archive/{plugin}/{date}-iteration-{N}` | finalized manifest is written; implementation stays in place |
-| iteration N `event-storm` | domain artifacts updated in place; `changelog.md` appended | — |
-| iteration N `domain-model` | only impacted plugin workspaces appear | `modify` does not scaffold |
-| iteration N `spec-generate` | `brief.md`, `plugin.json.draft`, `status.json` updated | only new skills get skeletons; existing files preserved |
-| iteration N `build-skills` | status updates only | new skills are built; modified skills are updated in place |
-| small direct change | no change | implementation edited directly |
+| 阶段 | `studio/changes/` 中的变化 | `target_dir` 中的变化 |
+|------|----------------------------|-----------------------|
+| `init` | 创建空工作区 | — |
+| `event-storm` | 出现域工作区及 `event-storm.md`、`changelog.md`、personas、journeys、processes | — |
+| `domain-model` | 出现域分析文档；出现插件工作区 `status.json` | `create` 插件建立 scaffold；`modify` 插件不建立 |
+| `skill-design` | 出现 `skill-map.md`；skill 进入 `draft` | — |
+| `spec-generate` | 生成 `brief.md`、`plugin.json.draft`，插件 phase 进入 `building` | 生成 skill 骨架和 command |
+| `build-skills` | 除状态更新外无新增设计文档 | `skill-creator` 在 `target_dir` 中原地补全或修改实现 |
+| `validate` | 匹配的工作区 phase 进入 `approved`，skill 进入 `tested` | 校验 `target_dir` 中实现 |
+| `promote` | 插件工作区从 `changes/` 移动到 `archive/{plugin}/{date}-iteration-{N}` | 写入正式 manifest；实现保留原地 |
+| iteration N `event-storm` | 域工件原地更新；`changelog.md` 追加 | — |
+| iteration N `domain-model` | 只出现受影响插件的工作区 | `modify` 不建立 scaffold |
+| iteration N `spec-generate` | 更新 `brief.md`、`plugin.json.draft`、`status.json` | 只为新 skill 生成骨架；已有文件保留 |
+| iteration N `build-skills` | 主要更新状态 | 新 skill 被构建；已有 skill 被原地更新 |
+| 小改动 | 无变化 | 直接编辑实现 |
 
-## Final Interpretation
+## 最终解释
 
-The current intended Astra Studio model is:
+当前 Astra Studio 的目标模型可以概括为：
 
-- domain knowledge is cumulative and stays active in `studio/changes/{domain}`
-- plugin design workspaces are temporary active change records
-- implementation always lives in `target_dir`
-- shipped design workspaces move into `studio/archive/`
-- confirmation is a user decision point
-- execution is a system responsibility
+- 域知识是持续累积的，保留在 `studio/changes/{domain}`
+- 插件工作区是临时的活跃变更记录
+- 实现始终存在于 `target_dir`
+- 已交付的设计工作区进入 `studio/archive/`
+- 用户负责阶段确认
+- 系统负责阶段执行
 
-That distinction is what keeps the pipeline understandable:
+这个模型的核心价值在于：
 
-- users confirm
-- the system builds
-- design stays traceable
-- implementation stays singular
+- 用户只判断方向
+- 系统完成构建
+- 设计过程可追踪
+- 实现始终保持唯一事实源
