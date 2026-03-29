@@ -1,6 +1,6 @@
 # Astra Studio Plugins
 
-This is a marketplace of Claude Code plugins for plugin development workflows. Each subdirectory is a standalone plugin.
+This is a marketplace of Codex plugins for plugin development workflows. Each subdirectory is a standalone plugin.
 
 ## Repository Structure
 
@@ -25,7 +25,7 @@ studio-quality   (zero deps)
 Each plugin follows this layout:
 ```
 plugin-name/
-├── .claude-plugin/plugin.json   # Plugin manifest (name, description, version)
+├── .Codex-plugin/plugin.json   # Plugin manifest (name, description, version)
 ├── commands/                    # Slash commands (.md files)
 ├── skills/                      # SKILL.md files for specific tasks
 │   └── skill-name/SKILL.md
@@ -38,12 +38,12 @@ plugin-name/
 
 ## Key Files
 
-- `.claude-plugin/marketplace.json`: Marketplace manifest — registers all 4 plugins with source paths
-- `.claude-plugin/plugin.json`: Root-level marketplace metadata
+- `.Codex-plugin/marketplace.json`: Marketplace manifest — registers all 4 plugins with source paths
+- `.Codex-plugin/plugin.json`: Root-level marketplace metadata
 - `*/plugin.json`: Per-plugin metadata — name, description, version, dependencies
 - `commands/*.md`: Slash commands invoked as `/plugin:command-name`
 - `skills/*/SKILL.md`: Detailed knowledge and workflows with YAML frontmatter (name, description, allowed-tools)
-- `agents/*.md`: Subagent role definitions — personas adopted by Claude during multi-role brainstorming
+- `agents/*.md`: Subagent role definitions — personas adopted by Codex during multi-role brainstorming
 - `templates/`: Scaffolding templates used by init skill to create `studio/` in user projects
 
 ## Agent System
@@ -64,8 +64,8 @@ All 6 insight skills use **dynamic expert discovery** — they scan for relevant
 2. **Plugin-first**: The workspace (`studio/changes/`) is organized by plugin, not by skill
 3. **Outer loop only**: Individual skill authoring delegates to the built-in `anthropic-skills:skill-creator`
 4. **Git-tracked workspace**: `studio/` directory in user projects is version-controlled (briefs, status, design decisions)
-5. **Standard Claude Code plugin spec**: No proprietary extensions — works with any Claude Code installation
-6. **Platform-neutral outputs**: SKILL.md skeletons produced by spec-generate contain no Claude-specific references — they run on any compatible runtime
+5. **Standard Codex plugin spec**: No proprietary extensions — works with any Codex installation
+6. **Platform-neutral outputs**: SKILL.md skeletons produced by spec-generate contain no Codex-specific references — they run on any compatible runtime
 7. **Customizable experts**: Users create domain experts via `/studio-core:create-expert`, saved to `studio/agents/` (git-tracked, team-shared)
 
 ## Workspace Lifecycle
@@ -135,4 +135,4 @@ spec-generate → SKILL.md skeletons (platform-neutral output)
 1. Edit SKILL.md files directly — changes take effect immediately when loaded via `--plugin-dir`
 2. Test commands with `/plugin:command-name` syntax (e.g., `/studio-core:init`)
 3. Skills trigger automatically when their description matches user intent
-4. Test locally: `claude --plugin-dir ./studio-core --plugin-dir ./studio-insight --plugin-dir ./studio-planner --plugin-dir ./studio-quality`
+4. Test locally: `Codex --plugin-dir ./studio-core --plugin-dir ./studio-insight --plugin-dir ./studio-planner --plugin-dir ./studio-quality`

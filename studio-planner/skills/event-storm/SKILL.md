@@ -12,13 +12,16 @@ Run a structured brainstorming session with multiple perspectives — product ma
 ## Pre-check
 
 1. Verify `studio/` exists. If not, run the init skill first.
-2. Load agent definitions using the **lookup order**:
+2. **Detect mode**: Check if `studio/changes/$ARGUMENTS/event-storm.md` already exists.
+   - If yes → **Incremental mode**. Read existing artifacts to establish baseline.
+   - If no → **Initial mode**. Fresh brainstorming session.
+3. Load agent definitions using the **lookup order**:
    - First check `studio/agents/{name}.md` (project-level customizations)
    - Then fall back to built-in agents (in studio-insight and studio-planner)
    - Project-level agents override built-ins with the same filename
-3. Always load: `product-manager.md` (PM) and `architect.md` (architect).
-4. Read `_domain-expert-template.md` — used to create new domain experts on the fly.
-5. Scan `studio/agents/` for any custom domain experts the team has created (via `/studio-insight:create-expert`).
+4. Always load: `product-manager.md` (PM) and `architect.md` (architect).
+5. Read `_domain-expert-template.md` — used to create new domain experts on the fly.
+6. Scan `studio/agents/` for any custom domain experts the team has created (via `/studio-insight:create-expert`).
 
 ## Execution Mode
 
@@ -32,6 +35,39 @@ At the start, ask the user which mode they prefer:
 >   - 确认点 3: Hotspot 排名（Step 6）
 
 In **fast mode**, still generate all artifacts with the same quality — just batch the validation points. If the user spots issues in a batch, pause to fix before continuing.
+
+## Incremental Mode
+
+When running on a domain that already has `event-storm.md`, the session is **incremental** — it builds on previous work rather than starting from scratch.
+
+### Entering incremental mode
+
+Present the current state to the user:
+
+> **检测到已有领域分析：`{domain-slug}`**
+>
+> | 已有产物 | 数量/状态 |
+> |---------|----------|
+> | 事件 | {N} 个已发现 |
+> | Persona | {list} |
+> | Journey | {list} |
+> | 流程 | {list} |
+> | 已关联插件 | {list from status.json plugins[]} |
+>
+> 请描述本次变更的背景：新增了什么？哪里需要修正？
+
+### Incremental workflow
+
+Each step focuses on **delta** — what's new or corrected:
+
+- **Set the stage**: Review existing context, describe what changed
+- **Discover events**: Focus on new/corrected events, update `event-storm.md` in-place
+- **Build personas**: Only create new or revise existing ones (update file in-place)
+- **Map journeys**: Only map new or revise impacted ones
+- **Model processes**: Only model new or revise corrected ones
+- **Identify hotspots**: Re-rank with full updated set
+
+Revised artifacts are **updated in-place** — git diff is the revision history. New artifacts are appended to the existing directories normally.
 
 ## Workflow
 
@@ -236,8 +272,9 @@ Create the workspace and save results. By this point the artifact skills have al
 
 ```
 studio/changes/{domain-slug}/
-├── event-storm.md       # synthesized brainstorming output
-├── status.json          # { type: "domain", phase: "planning" }
+├── event-storm.md       # synthesized brainstorming output (updated in-place on iterations)
+├── changelog.md         # append-only iteration log
+├── status.json          # { type: "domain", iteration: N }
 ├── personas/            # created by persona-insight skill
 │   ├── {persona-1}.md
 │   └── {persona-2}.md
@@ -248,6 +285,54 @@ studio/changes/{domain-slug}/
 ```
 
 **Derive `{domain-slug}`** from the domain description: lowercase, kebab-case, 2-3 words (e.g., "children-health", "trading-ops").
+
+### event-storm.md
+
+In **initial mode**, write all events, hotspots, and synthesis normally.
+
+In **incremental mode**, update `event-storm.md` in-place — add new events, revise existing ones, re-rank hotspots. Git diff serves as the revision history.
+
+### changelog.md
+
+On every run, append an entry to `studio/changes/{domain-slug}/changelog.md`:
+
+```markdown
+## {YYYY-MM-DD}
+
+**Summary**: {1-2 sentence description of what changed}
+
+### Added
+- {New persona: health-conscious-grandparent}
+- {New journey: grandparent-weekly-checkup}
+
+### Revised
+- {Corrected process: meal-recording — fixed missing validation step}
+
+### Impact on Plugins
+- `{plugin-a}`: needs modification — {reason}
+- `{plugin-b}`: new plugin needed — {reason}
+- `{plugin-c}`: no change
+```
+
+For the first run, the "Added" section lists everything.
+
+### status.json
+
+Update `studio/changes/{domain-slug}/status.json`:
+
+```json
+{
+  "type": "domain",
+  "domain": "{domain-slug}",
+  "iteration": 2,
+  "phase": "planning",
+  "created_at": "{original timestamp}",
+  "updated_at": "{now ISO-8601}",
+  "plugins": ["{existing-plugin-1}", "{new-plugin}"]
+}
+```
+
+The `iteration` field is the current iteration number. The `plugins` list is cumulative.
 
 Write `event-storm.md` with the following sections:
 

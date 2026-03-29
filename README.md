@@ -33,10 +33,10 @@ claude plugin install studio-quality@astra-studio
 
 # 5. Build each skill (uses official skill-creator)
 /skill-creator
-# → point it at studio/changes/{plugin}/skills/{skill}/SKILL.md
+# → point it at {target_dir}/skills/{skill}/SKILL.md (the single source of truth)
 
 # 6. Validate the plugin
-/studio-quality:validate studio/changes/{plugin}
+/studio-quality:validate {target_dir}
 
 # 7. Ship it
 /studio-core:promote {plugin-name}
@@ -71,6 +71,7 @@ Step 2: domain-model
   Clusters events into business domains, draws plugin boundaries
   → Invokes: domain-canvas, behavior-matrix, opportunity-brief
   → Writes: studio/changes/{domain}/domain-map.md
+  → Creates: {target_dir}/ scaffold for each plugin candidate
 
         ↓ user confirms
 
@@ -83,7 +84,8 @@ Step 3: skill-design
 
 Step 4: spec-generate
   Auto-generates all specification files
-  → brief.md, plugin.json.draft, SKILL.md skeletons, commands
+  → Design docs → studio/changes/ (brief.md, plugin.json.draft)
+  → Implementation → {target_dir}/ (SKILL.md skeletons, commands)
   → Advances status: planning → building
 ```
 
@@ -130,10 +132,9 @@ Custom experts are saved to `studio/agents/` (git-tracked, team-shared) and auto
                                                 ↓
                                         spec-generate
                                                 ↓
-                                studio/changes/{plugin}/
-                                ├── brief.md, plugin.json.draft
-                                ├── skills/{skill}/SKILL.md  ← skeletons
-                                └── commands/{skill}.md
+                                studio/changes/{plugin}/    {target_dir}/
+                                ├── brief.md                skills/{skill}/SKILL.md
+                                └── plugin.json.draft       commands/{skill}.md
                                                 ↓
                                     /skill-creator (official)
                                                 ↓
@@ -154,6 +155,8 @@ Astra Studio is a **marketplace** (collection of plugins), not a monolithic plug
 - **studio-quality**: Zero dependencies. Can validate any plugin, not just studio-managed ones.
 
 The `studio/` directory is **git-tracked** — it holds development documentation (briefs, design decisions, status) with version control value. Inspired by [OpenSpec](https://github.com/Fission-AI/OpenSpec)'s spec-driven workspace pattern.
+
+Domains evolve **incrementally** — re-running the pipeline updates artifacts in-place (git diff = revision history), `changelog.md` logs each iteration, and only affected plugins (`create`/`modify`) get change workspaces.
 
 ## Development
 

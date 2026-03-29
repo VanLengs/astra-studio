@@ -14,9 +14,11 @@ Consult `${CLAUDE_SKILL_DIR}/../../references/skill-decomposition-guide.md` for 
 ## Pre-check
 
 1. Verify `studio/` exists.
-2. If `$ARGUMENTS` is a plugin name, read `studio/changes/$ARGUMENTS/domain-map.md` (or the parent domain's `domain-map.md` that references this plugin).
-3. If no domain-map.md exists, this skill can work from a user description — but recommend running event-storm and domain-model first for better results.
-4. Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` — the architect perspective leads skill design.
+2. If `$ARGUMENTS` is a plugin name, read `studio/changes/$ARGUMENTS/status.json` to get the `action` field and `domain`.
+3. Read the parent domain's `domain-map.md` that references this plugin.
+4. If no domain-map.md exists, this skill can work from a user description — but recommend running event-storm and domain-model first for better results.
+5. Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` — the architect perspective leads skill design.
+6. **For `action: "modify"`**: Also read the existing SKILL.md files in `{target_dir}/skills/` to understand the current implementation.
 
 ## Workflow
 
@@ -35,6 +37,21 @@ List everything the plugin should be able to do. Sources:
 - User input: additional capabilities they want
 
 Express each capability as a **user action**: "As [persona], I want to [action] so that [outcome]".
+
+**For `action: "modify"`**: Start by listing the **existing** capabilities from `{target_dir}/skills/*/SKILL.md`, then overlay the changes from the domain's `changelog.md` and updated `event-storm.md`:
+- New capabilities not covered by existing skills
+- Modified capabilities where existing skill behavior needs to change
+- Existing capabilities that remain unchanged
+
+Present the analysis:
+
+> **现有 Skill 与变更的匹配分析：**
+>
+> | 现有 Skill | 现有能力 | 受变更影响？ | 影响说明 |
+> |-----------|---------|------------|---------|
+> | {skill-a} | {desc} | ✅ 不变 | — |
+> | {skill-b} | {desc} | ✏️ 需修改 | {what changed} |
+> | — | {new capability} | 🆕 新增 | {why needed} |
 
 ## Step 2: Group into Skills
 
@@ -117,6 +134,7 @@ Write `studio/changes/{plugin-name}/skill-map.md`:
 # Skill Map: {plugin-name}
 
 > Date: {YYYY-MM-DD}
+> Action: {create | modify}
 
 ## Skills
 
@@ -150,8 +168,19 @@ Write `studio/changes/{plugin-name}/skill-map.md`:
 3. {skill-c} — depends on skill-b
 ```
 
+For `action: "modify"`, only list skills that need work (new or modified). Unchanged skills can be noted briefly at the bottom but don't need full specs.
+
 Update `studio/changes/{plugin-name}/status.json`:
-- Add each skill with status `draft`
+- Add each skill that needs work with status `draft`
 - Keep phase as `planning`
+
+```json
+{
+  "skills": {
+    "existing-skill-b": "draft",
+    "new-skill-c": "draft"
+  }
+}
+```
 
 Tell the user: "Skill design complete. Run `/studio-planner:spec-generate {plugin-name}` to generate all specification files, or run `/skill-creator` directly on any skill to start building."

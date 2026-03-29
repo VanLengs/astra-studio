@@ -21,7 +21,7 @@ Run comprehensive validation on a plugin and produce an actionable report. Check
 ## Step 1: Identify Plugin
 
 Accept the plugin directory path via `$ARGUMENTS`. The path can be:
-- A `studio/changes/{name}/` workspace (development)
+- A `{target_dir}/` directory (during development — the single source of truth for implementation)
 - A `plugins/{name}/` directory (production)
 - Any directory with `.claude-plugin/plugin.json`
 
@@ -90,8 +90,8 @@ Categories:
 
 ## Step 6: Update Studio Status (optional)
 
-If the plugin is in `studio/changes/` and all checks pass:
-- Ask the user if they want to update `status.json` phase to `approved`
+If the plugin has a corresponding workspace in `studio/changes/` (look up by plugin name) and all checks pass:
+- Ask the user if they want to update the workspace's `status.json` phase to `approved`
 - If yes, update the file
 
 If checks fail, suggest specific remediation steps for each failure:

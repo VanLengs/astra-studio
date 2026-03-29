@@ -20,9 +20,13 @@ If `studio/` doesn't exist, suggest running `/studio-core:init`.
 For each directory in `studio/changes/` (excluding `.gitkeep`):
 1. Read `status.json` — if missing, show the entry with phase "unknown"
 2. Check `type` field to distinguish workspace types:
-   - `"type": "domain"` → domain-level workspace (event-storm, domain-map). Show domain name and its `plugins` list.
-   - `"type": "plugin"` (or no `type` field for legacy) → plugin-level workspace. Show plugin name, phase, skills, target.
-3. For plugin workspaces: extract plugin name, phase, target_collection, skill statuses. Calculate completion: count skills with status `tested` or `approved` vs total.
+   - `"type": "domain"` → domain-level workspace (event-storm, domain-map). Show domain name, `iteration`, and its `plugins` list.
+   - `"type": "plugin"` (or no `type` field for legacy) → plugin-level workspace. Read `target_dir`, `action` (create/modify). Show plugin name, action, phase, target_dir, skill statuses.
+3. For plugin workspaces:
+   - Extract plugin name, phase, target_dir, skill statuses from status.json
+   - Verify implementation exists: check that `{target_dir}/skills/` directory exists and contains SKILL.md files
+   - Calculate completion: count skills with status `tested` or `approved` vs total
+   - If `{target_dir}/` doesn't exist yet, note "target not scaffolded"
 
 If `studio/changes/` is empty (only `.gitkeep`), note "No active work" and skip to Step 3.
 
@@ -42,16 +46,16 @@ Studio Status
 ═════════════
 
 Domains (studio/changes/)
-  children-health    planning    plugins: nutrition-planner, exercise-addon, health-reports
+  children-health    iteration 2    plugins: nutrition-planner, exercise-addon, health-reports
 
-Plugins (studio/changes/)
-┌──────────────────┬────────────┬────────────────┬───────────────────┐
-│ Plugin           │ Phase      │ Skills         │ Target            │
-├──────────────────┼────────────┼────────────────┼───────────────────┤
-│ nutrition-planner│ building   │ 1/4 tested     │ plugins/          │
-│ exercise-addon   │ planning   │ 0/3 draft      │ plugins/          │
-│ health-reports   │ approved   │ 2/2 tested     │ plugins/          │
-└──────────────────┴────────────┴────────────────┴───────────────────┘
+Plugins (studio/changes/ → target)
+┌──────────────────┬─────────┬────────────┬────────────────┬───────────────────────────────┐
+│ Plugin           │ Action  │ Phase      │ Skills         │ Target Dir                    │
+├──────────────────┼─────────┼────────────┼────────────────┼───────────────────────────────┤
+│ nutrition-planner│ create  │ building   │ 1/4 tested     │ plugins/nutrition-planner     │
+│ exercise-addon   │ modify  │ planning   │ 0/3 draft      │ plugins/exercise-addon        │
+│ health-reports   │ create  │ approved   │ 2/2 tested     │ plugins/health-reports        │
+└──────────────────┴─────────┴────────────┴────────────────┴───────────────────────────────┘
 
 Recently Shipped (studio/archive/)
   2026-03-25-auth-plugin → plugins/my-collection/auth-plugin

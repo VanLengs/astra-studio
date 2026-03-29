@@ -9,11 +9,26 @@ user-invocable: true
 
 Automatically produce all specification files for a plugin based on the planning artifacts (event-storm.md, domain-map.md, skill-map.md). This is pure output — no brainstorming or analysis, just structured file generation.
 
+## Design Principle: Spec vs Implementation Separation
+
+`studio/changes/` is a **design workspace** — it holds proposals, specs, and rationale. It does NOT hold executable implementation files. All runnable artifacts (SKILL.md, commands, scripts, hooks) are written **directly to the target plugin directory** so there is always a single source of truth.
+
+```
+studio/changes/{plugin}/     ← design docs only
+  status.json, brief.md, skill-map.md, plugin.json.draft
+
+{target_dir}/                ← single source of truth for implementation
+  skills/{skill}/SKILL.md, commands/, scripts/, hooks/
+```
+
 ## Pre-check
 
 1. Verify `studio/` exists.
 2. Read `studio/changes/$ARGUMENTS/skill-map.md` — required. If missing, tell the user to run `/studio-planner:skill-design` first.
-3. Read `studio/changes/$ARGUMENTS/status.json` to get the `domain` field. Use it to locate domain-level artifacts:
+3. Read `studio/changes/$ARGUMENTS/status.json` to get the `domain`, `target_dir`, and `action` fields.
+   - `target_dir` is the path where implementation files are written (e.g., `plugins/nutrition-planner`).
+   - If `target_dir` is missing, derive it as `{target_collection}/{plugin-name}`.
+   - `action` is `"create"` (default) or `"modify"`.
    - Read `studio/changes/{domain}/domain-map.md` — optional, used for brief and manifest context.
    - Read `studio/changes/{domain}/event-storm.md` — optional, used for brief context.
    - If no `domain` field or domain-level files don't exist, proceed without them.
@@ -22,14 +37,29 @@ Automatically produce all specification files for a plugin based on the planning
 
 ## Workflow
 
-1. **Generate brief.md** — synthesize business context from planning artifacts
-2. **Generate plugin.json.draft** — create the plugin manifest
-3. **Generate SKILL.md skeletons** — one per skill from the skill map
-4. **Generate commands** — create command files that invoke skills
-5. **Update status.json** — add all skills with status `draft`
-6. **Report** — summarize what was generated
+1. **Ensure target directory** — create `{target_dir}/` if it doesn't exist
+2. **Generate brief.md** — synthesize business context (→ `studio/changes/`)
+3. **Generate plugin.json.draft** — create the plugin manifest (→ `studio/changes/`)
+4. **Generate SKILL.md skeletons** — one per skill from the skill map (→ `{target_dir}/`)
+5. **Generate commands** — create command files that invoke skills (→ `{target_dir}/`)
+6. **Update status.json** — add all skills with status `draft`
+7. **Report** — summarize what was generated
 
-## Step 1: Generate brief.md
+## Step 1: Ensure Target Directory
+
+Create `{target_dir}/` and its subdirectories if they don't exist:
+
+```
+{target_dir}/
+├── skills/
+└── commands/
+```
+
+If the target directory already has files (e.g., from a previous run or manual work), **do not delete anything**. This step only creates missing directories.
+
+## Step 2: Generate brief.md
+
+Write to `studio/changes/{plugin-name}/brief.md` — this is a design document.
 
 If `brief.md` doesn't exist yet, create it using the template. Fill in:
 
@@ -40,9 +70,9 @@ If `brief.md` doesn't exist yet, create it using the template. Fill in:
 
 If `brief.md` already exists (e.g., from a manual process), leave it unchanged.
 
-## Step 2: Generate plugin.json.draft
+## Step 3: Generate plugin.json.draft
 
-Create `studio/changes/{plugin-name}/plugin.json.draft`:
+Write to `studio/changes/{plugin-name}/plugin.json.draft` — this is a manifest proposal, not the final manifest.
 
 ```json
 {
@@ -64,13 +94,15 @@ Rules:
 - `keywords` should be 3-5 searchable terms
 - `dependencies` only list other plugins in the same collection
 
-## Step 3: Generate SKILL.md Skeletons
+## Step 4: Generate SKILL.md Skeletons
 
-For each skill in `skill-map.md`, create:
+For each skill in `skill-map.md`, create the skeleton **in the target plugin directory**:
 
 ```
-studio/changes/{plugin-name}/skills/{skill-name}/SKILL.md
+{target_dir}/skills/{skill-name}/SKILL.md
 ```
+
+This is the single source of truth — `/skill-creator` works directly on these files.
 
 Skeleton content — designed for the official `/skill-creator` to flesh out:
 
@@ -110,22 +142,22 @@ user-invocable: true
 - {From skill-map.md out-of-scope list}
 ```
 
-If a SKILL.md already exists at that path, **do not overwrite** — the user or skill-creator may have already started working on it. Print a warning instead.
+If a SKILL.md already exists at that path, **do not overwrite** — the user or skill-creator may have already started working on it. Print a warning instead. This is especially important for `action: "modify"` where existing skills should be preserved.
 
 If the skill is classified as **Moderate** or above, also create the `scripts/` directory:
 
 ```
-studio/changes/{plugin-name}/skills/{skill-name}/scripts/.gitkeep
+{target_dir}/skills/{skill-name}/scripts/.gitkeep
 ```
 
 If the skill is classified as **MCP-dependent**, note it for later — `/studio-quality:wire-mcp` will handle the MCP config.
 
-## Step 4: Generate Commands
+## Step 5: Generate Commands
 
-For each user-invocable skill, create a command file:
+For each user-invocable skill, create a command file **in the target plugin directory**:
 
 ```
-studio/changes/{plugin-name}/commands/{skill-name}.md
+{target_dir}/commands/{skill-name}.md
 ```
 
 Command content:
@@ -143,14 +175,16 @@ Use skill: "{skill-name}"
 
 Only create commands for skills marked `user-invocable: true`. Internal/helper skills don't need commands.
 
-## Step 5: Update status.json
+## Step 6: Update status.json
 
 Update `studio/changes/{plugin-name}/status.json`:
 
 ```json
 {
   "plugin": "{plugin-name}",
+  "domain": "{domain-slug}",
   "target_collection": "{from domain-map.md or config.yaml default}",
+  "target_dir": "{target_collection}/{plugin-name}",
   "phase": "building",
   "created_at": "{original timestamp}",
   "updated_at": "{now ISO-8601}",
@@ -164,16 +198,19 @@ Update `studio/changes/{plugin-name}/status.json`:
 
 Note: phase advances from `planning` to `building` because the specs are now ready for implementation.
 
-## Step 6: Report
+## Step 7: Report
 
-Print a summary:
+Print a summary showing the separation clearly:
 
 ```
 Spec generation complete for {plugin-name}
 
-Generated:
+Design docs (studio/changes/{plugin-name}/):
   brief.md              — business context and success criteria
-  plugin.json.draft     — plugin manifest
+  plugin.json.draft     — plugin manifest proposal
+  status.json           — updated: planning → building
+
+Implementation ({target_dir}/):
   skills/
     {skill-a}/SKILL.md  — skeleton (Simple)
     {skill-b}/SKILL.md  — skeleton (Moderate, scripts/ created)
@@ -182,12 +219,10 @@ Generated:
     {skill-a}.md
     {skill-b}.md
 
-Status: planning → building
-
 Next steps:
-  Use /skill-creator to flesh out each skill skeleton
-  Run /studio-quality:wire-mcp {plugin-name} if MCP servers are needed
-  Run /studio-quality:validate {plugin-name} when all skills are ready
+  Use /skill-creator to flesh out each skill skeleton in {target_dir}/
+  Run /studio-quality:wire-mcp {target_dir} if MCP servers are needed
+  Run /studio-quality:validate {target_dir} when all skills are ready
 ```
 
 If this is part of a multi-plugin collection, remind the user to run spec-generate for each plugin.

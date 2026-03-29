@@ -15,8 +15,9 @@ Consult `${CLAUDE_SKILL_DIR}/../../references/plugin-architecture-guide.md` for 
 
 1. Verify `studio/` exists.
 2. If `$ARGUMENTS` is provided, read `studio/changes/$ARGUMENTS/event-storm.md`. If it doesn't exist, ask the user to run `/studio-planner:event-storm` first.
-3. If no argument, scan `studio/changes/` for workspaces that have `event-storm.md` but no `domain-map.md`. If exactly one, use it. If multiple, ask the user to choose.
+3. If no argument, scan `studio/changes/` for workspaces that have `event-storm.md` but no `domain-map.md`, or whose `domain-map.md` is outdated (check `updated_at` in status.json vs event-storm.md modification). If exactly one, use it. If multiple, ask the user to choose.
 4. Read `${CLAUDE_SKILL_DIR}/../../agents/architect.md` — the architect perspective leads this step.
+5. **Detect mode**: Read `studio/changes/{domain}/status.json`. If `plugins` list is non-empty → **Incremental mode**: compare updated event clusters against existing plugins. Otherwise → **Initial mode**: all candidates are `create`.
 
 ## Workflow
 
@@ -67,23 +68,49 @@ This produces `studio/changes/{domain}/behavior-matrix.md` with:
 
 ## Step 4: Propose Plugins
 
-Translate each non-generic domain into a plugin candidate:
+Translate each non-generic domain into a plugin candidate. In **incremental mode**, also assess existing plugins for changes.
+
+### Initial mode (iteration 1)
 
 For each candidate:
 - **Plugin name**: kebab-case, derived from domain name (e.g., `meal-planner`)
 - **Domain**: Which domain it represents
 - **Role**: `core` or `add-on` (from classification)
+- **Action**: `create`
 - **Responsibility**: 1-2 sentence description of what it does
 - **Expected skills**: Rough list of capabilities (will be refined in skill-design)
 - **Dependencies**: Which other plugins it depends on
 - **MCP needs**: External services it might need (from generic domain analysis)
 
-Decide the collection structure:
+### Incremental mode
+
+For each domain cluster, determine whether it maps to an **existing** or **new** plugin:
+
+1. Read the `plugins` list from the domain's `status.json`
+2. Cross-reference the updated event clusters and `changelog.md` impact section
+3. Classify each candidate: `create` (new) or `modify` (existing plugin with changed events/processes)
+
+Plugins that are **not affected** by this iteration do NOT appear in `studio/changes/` — skip them.
+
+Present the **impact assessment** to the user:
+
+> **插件影响分析：**
+>
+> | 插件 | 动作 | 原因 |
+> |------|------|------|
+> | {name} | 🆕 新建 | {reason} |
+> | {name} | ✏️ 修改 | {reason} |
+>
+> 不受影响的插件不会出现在变更列表中。确认后我会创建对应的变更工作区。
+
+The user must explicitly confirm before proceeding. This is a key decision point.
+
+### Collection structure decision
+
+Same rules as initial mode:
 - 1 plugin → single plugin, no collection
 - 2-5 related plugins → one collection with clear core
 - Independent plugins in different domains → separate collections
-
-Present to the user for validation. This is a key decision point — the user should explicitly approve the plugin structure before proceeding.
 
 ## Step 5: Assess Opportunities
 
@@ -106,6 +133,7 @@ Write `studio/changes/{name}/domain-map.md`:
 # Domain Map: {Domain}
 
 > Date: {YYYY-MM-DD}
+> Iteration: {N}
 
 ## Artifacts
 - Domain Canvas: see `domain-canvas.md`
@@ -114,10 +142,10 @@ Write `studio/changes/{name}/domain-map.md`:
 
 ## Plugin Candidates
 
-| Plugin | Domain | Role | Description | Dependencies | Priority |
-|--------|--------|------|-------------|-------------|----------|
-| {name} | {domain} | core | {desc} | — | 1 |
-| {name} | {domain} | add-on | {desc} | {core-name} | 2 |
+| Plugin | Domain | Role | Action | Description | Dependencies | Priority |
+|--------|--------|------|--------|-------------|-------------|----------|
+| {name} | {domain} | core | create | {desc} | — | 1 |
+| {name} | {domain} | add-on | modify | {desc} | {core-name} | 2 |
 
 ## Generic Capabilities (no custom plugin needed)
 - {capability} → {existing solution}
@@ -127,14 +155,14 @@ Write `studio/changes/{name}/domain-map.md`:
 - **Rationale**: {why this structure}
 ```
 
-For each confirmed plugin candidate, create a **plugin-level** workspace as a peer directory alongside the domain workspace:
+### Create workspace per plugin
+
+**For `action: "create"` plugins**:
 
 ```
 studio/changes/{plugin-name}/
 └── status.json
 ```
-
-Each plugin's `status.json` references back to the domain workspace:
 
 ```json
 {
@@ -142,24 +170,67 @@ Each plugin's `status.json` references back to the domain workspace:
   "plugin": "{plugin-name}",
   "domain": "{domain-slug}",
   "target_collection": "plugins",
+  "target_dir": "plugins/{plugin-name}",
+  "action": "create",
+  "iteration": {N},
   "phase": "planning",
   "created_at": "{ISO-8601}",
   "skills": {}
 }
 ```
 
+Also create the target plugin directory as an empty scaffold:
+
+```
+{target_dir}/
+├── skills/
+│   └── .gitkeep
+└── commands/
+    └── .gitkeep
+```
+
+**For `action: "modify"` plugins** — create a change workspace referencing the existing target:
+
+```
+studio/changes/{plugin-name}/
+└── status.json
+```
+
+```json
+{
+  "type": "plugin",
+  "plugin": "{plugin-name}",
+  "domain": "{domain-slug}",
+  "target_collection": "plugins",
+  "target_dir": "plugins/{plugin-name}",
+  "action": "modify",
+  "iteration": {N},
+  "phase": "planning",
+  "created_at": "{ISO-8601}",
+  "skills": {}
+}
+```
+
+Do NOT create a new target directory scaffold — the target already exists.
+
 The `domain` field points to `studio/changes/{domain-slug}/` where `event-storm.md` and `domain-map.md` live. This avoids duplicating domain-level artifacts into each plugin workspace.
 
-Also update the domain workspace's `status.json` to register the plugins:
+The `target_dir` field is where implementation files (SKILL.md, commands, scripts) will be written by `spec-generate` and edited by `skill-creator`. This is the **single source of truth** for runnable code — `studio/changes/` only holds design documents.
+
+Also update the domain workspace's `status.json` — add new plugins to the `plugins` list and bump `iteration`:
 
 ```json
 {
   "type": "domain",
   "domain": "{domain-slug}",
+  "iteration": {N},
   "phase": "planning",
   "created_at": "...",
-  "plugins": ["{plugin-name-1}", "{plugin-name-2}"]
+  "updated_at": "{now ISO-8601}",
+  "plugins": ["{plugin-name-1}", "{plugin-name-2}", "{new-plugin}"]
 }
 ```
+
+The `plugins` list is cumulative — it contains all plugins ever associated with this domain.
 
 Tell the user: "Domain model complete. Run `/studio-planner:skill-design {plugin-name}` to design skills for each plugin."

@@ -1,8 +1,8 @@
 ---
-description: Promote an approved plugin from studio to production
+description: Finalize and ship an approved plugin — convert manifest, archive design docs
 argument-hint: [plugin-name]
 ---
 
-Promote the plugin `$ARGUMENTS` from `studio/changes/` to its target plugins directory, then archive the development record.
+Finalize the plugin `$ARGUMENTS` — convert the manifest draft to production, archive the design workspace from `studio/changes/`, and mark the plugin as shipped. Implementation files already live in the target directory.
 
 Use skill: "promote"
