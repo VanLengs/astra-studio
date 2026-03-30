@@ -41,6 +41,13 @@
 - `hooks/`
 - `.mcp.json`
 
+当插件具有特定特征（traits）时，`spec-generate` 还会在 `target_dir` 中产出额外脚手架：
+
+- **stateful**：`skills/init-workspace/SKILL.md` + `templates/runtime-config.yaml.tmpl` + `templates/runtime-status.json.tmpl`
+- **hil-gated**：相关 SKILL.md 骨架中的 `## Approval Gate` 段落
+- **multi-pipeline**：每条流水线的 `commands/{pipeline-name}.md` 编排命令
+- **expert-scoped**：`agents/` 目录中的运行时专家定义
+
 ### 确认与执行分离
 
 整个流程有阶段确认点，但执行动作由系统完成。
@@ -362,14 +369,16 @@ studio/
 
 ### 系统做了什么
 
-- 系统为每个插件拆分了 skill
-- 系统把设计结果写进 `skill-map.md`
+- 系统检测了每个插件的跨领域特征（traits）：`stateful`、`hil-gated`、`kb-dependent`、`multi-pipeline`、`expert-scoped`
+- 系统为每个插件拆分了 skill（特征会影响拆分：HIL 检查点处拆分、不同流水线独立拆分、有状态插件需要 init-workspace skill）
+- 系统把设计结果写进 `skill-map.md`（含 `## Plugin Traits` 和 `## Pipelines` 段落）
 - `status.json.skills` 开始记录本轮涉及的 skill
 
 ### 阶段确认点
 
 用户确认：
 
+- 插件特征检测是否准确
 - skill 边界是否合理
 - 数据流是否清晰
 - 复杂度分层是否合理
@@ -475,6 +484,10 @@ workshop-designer/
 - `brief.md` 与 `plugin.json.draft` 被写入设计工作区
 - skill 骨架直接写入 `target_dir`
 - command 文件直接写入 `target_dir`
+- 如果检测到 `stateful` 特征：生成 `skills/init-workspace/SKILL.md`、`templates/runtime-config.yaml.tmpl`、`templates/runtime-status.json.tmpl`
+- 如果检测到 `hil-gated` 特征：在相关 SKILL.md 骨架中注入 `## Approval Gate` 段落
+- 如果检测到 `multi-pipeline` 特征：为每条流水线生成 `commands/{pipeline-name}.md` 编排命令
+- 如果检测到 `expert-scoped` 特征：在 `agents/` 中生成运行时专家定义
 - 插件 phase 从 `planning` 进入 `building`
 
 ### 关键规则
@@ -483,11 +496,13 @@ workshop-designer/
 
 真正的构建动作由下一阶段完成。
 
-## 场景 5：build-skills 阶段
+## 场景 5：build-skills 阶段（初始填充）
 
 用户确认进入 build 阶段后，Astra Studio 自动执行 `build-skills`。
 
-`build-skills` 会读取 `studio/changes/{plugin}/` 中的插件工作区，确定本轮哪些 skill 需要处理，然后在 `target_dir` 中自动调用 `skill-creator`。
+`build-skills` 产出**可工作的初稿**，而非完成品。它读取 `studio/changes/{plugin}/` 中的插件工作区，确定本轮哪些 skill 需要处理，然后在 `target_dir` 中自动调用 `skill-creator` 进行初始填充。
+
+> **初始填充 vs 迭代优化**：初稿覆盖核心逻辑和基本流程。边界情况、错误处理、评估用例需要用户后续用 `skill-creator` 迭代优化。
 
 ### 工作区快照
 
@@ -552,11 +567,18 @@ workshop-designer/
 
 ### 系统做了什么
 
-- Astra Studio 执行了 `build-skills`
-- `build-skills` 在内部调用了 `skill-creator`
+- Astra Studio 执行了 `build-skills`（初始填充）
+- `build-skills` 在内部调用了 `skill-creator`，产出可工作的初稿
 - `target_dir` 中的实现被原地充实
 - 插件仍处于 `phase: "building"`
 - 各 skill 的状态从 `draft` 推进到 `built`
+
+### 下一步
+
+初始填充完成后，用户应：
+1. 用真实输入测试每个技能
+2. 用 `skill-creator` 迭代优化（边界情况、错误处理、评估用例）
+3. 运行 `/studio-quality:validate` 校验
 
 ## 场景 6：validate 通过
 
@@ -641,11 +663,15 @@ workshop-designer/
 
 确认后，系统可以执行 promote。
 
-## 场景 7：promote
+## 场景 7：promote（版本化里程碑）
 
-promote 会正式化 manifest，并归档设计工作区。
+promote 创建版本化里程碑，正式化 manifest 并快照设计工作区。
 
-实现不会被复制。
+关键行为变化：
+- 设计文档被**复制**（不是移动）到 `studio/archive/`
+- 活跃工作区保留在 `studio/changes/` 中，供下一轮迭代使用
+- 版本号自动递增（v0.1.0 → v0.1.1）
+- 实现不会被复制
 
 ### Promote `workshop-designer` 后的工作区快照
 
@@ -658,6 +684,11 @@ studio/
 │   │   └── ...
 │   ├── workshop-core/
 │   │   └── ...
+│   ├── workshop-designer/
+│   │   ├── status.json          # phase 重置为 planning, iteration++
+│   │   ├── skill-map.md         # 保留供下一轮迭代参考
+│   │   ├── brief.md
+│   │   └── plugin.json.draft
 │   ├── workshop-insight/
 │   │   └── ...
 │   ├── workshop-quality/
@@ -682,7 +713,37 @@ workshop-designer/
     └── ...
 ```
 
-### 归档后的状态示例
+### 活跃工作区状态（promote 后）
+
+`studio/changes/workshop-designer/status.json`：
+
+```json
+{
+  "type": "plugin",
+  "plugin": "workshop-designer",
+  "domain": "course-workshop",
+  "target_collection": ".",
+  "target_dir": "workshop-designer",
+  "action": "create",
+  "iteration": 2,
+  "phase": "planning",
+  "created_at": "2026-03-28T21:30:00+08:00",
+  "updated_at": "2026-03-28T23:10:00+08:00",
+  "last_shipped_at": "2026-03-28T23:10:00+08:00",
+  "last_shipped_version": "0.1.0",
+  "skills": {
+    "driving-question": "tested",
+    "network-map": "tested",
+    "inquiry-scaffold": "tested",
+    "activity-design": "tested",
+    "proposal-generate": "tested"
+  }
+}
+```
+
+### 归档快照状态
+
+`studio/archive/workshop-designer/2026-03-28-iteration-1/status.json`：
 
 ```json
 {
@@ -697,7 +758,7 @@ workshop-designer/
   "created_at": "2026-03-28T21:30:00+08:00",
   "updated_at": "2026-03-28T23:10:00+08:00",
   "shipped_at": "2026-03-28T23:10:00+08:00",
-  "shipped_to": "workshop-designer",
+  "shipped_version": "0.1.0",
   "archive_path": "studio/archive/workshop-designer/2026-03-28-iteration-1",
   "skills": {
     "driving-question": "tested",
@@ -711,14 +772,15 @@ workshop-designer/
 
 ### 系统做了什么
 
-- 正式 manifest 被写入 `target_dir`
-- 设计工作区从 `studio/changes/` 被移动到 `studio/archive/`
+- 正式 manifest 被写入 `target_dir`，版本号自动递增
+- 设计工作区被**复制**（不是移动）到 `studio/archive/`
+- 活跃工作区保留在 `studio/changes/`，phase 重置为 `planning`，iteration 递增
+- 活跃工作区新增 `last_shipped_at` 和 `last_shipped_version` 字段
 - 实现文件没有被复制
-- `changes/` 重新恢复干净，只保留活跃工作
+
+> **promote 是里程碑，不是终态**。设计文档保持活跃，供下一轮迭代参考和修改。
 
 iteration 1 中其它插件也会依次经历相同的 promote 流程。
-
-在 iteration 1 全部完成后，`changes/` 中只剩域工作区。
 
 ## 场景 8：iteration 2 开始
 
@@ -1071,17 +1133,29 @@ studio/
 │   └── ...
 ├── changes/
 │   ├── .gitkeep
-│   └── course-workshop/
-│       ├── event-storm.md
-│       ├── changelog.md
-│       ├── domain-map.md
-│       ├── domain-canvas.md
-│       ├── behavior-matrix.md
-│       ├── opportunity-brief.md
-│       ├── personas/
-│       ├── journeys/
-│       ├── processes/
-│       └── status.json
+│   ├── course-workshop/
+│   │   ├── event-storm.md
+│   │   ├── changelog.md
+│   │   ├── domain-map.md
+│   │   ├── domain-canvas.md
+│   │   ├── behavior-matrix.md
+│   │   ├── opportunity-brief.md
+│   │   ├── personas/
+│   │   ├── journeys/
+│   │   ├── processes/
+│   │   └── status.json
+│   ├── workshop-core/
+│   │   └── ...              # 活跃工作区保留
+│   ├── workshop-designer/
+│   │   └── ...              # 活跃工作区保留
+│   ├── workshop-insight/
+│   │   └── ...
+│   ├── workshop-quality/
+│   │   └── ...
+│   ├── workshop-resource/
+│   │   └── ...
+│   └── workshop-feedback/
+│       └── ...              # 活跃工作区保留
 └── archive/
     ├── workshop-core/
     │   └── 2026-03-28-iteration-1/
@@ -1121,10 +1195,11 @@ workshop-feedback/
 
 ### 系统做了什么
 
-- 活跃插件工作区被移动到 archive
+- 设计文档被**复制**到 archive（活跃工作区保留在 changes/ 中）
+- 活跃工作区 phase 重置为 `planning`，iteration 递增，版本号自动递增
 - 域工作区继续保留并累积领域知识
 - 实现继续留在各自的 `target_dir`
-- 设计历史按插件与迭代保留
+- 设计历史按插件与迭代保留在 archive 中
 
 ## 场景 10：小的实现改动
 
@@ -1164,11 +1239,11 @@ studio/
 | `init` | 创建空工作区 | — |
 | `event-storm` | 出现域工作区及 `event-storm.md`、`changelog.md`、personas、journeys、processes | — |
 | `domain-model` | 出现域分析文档；出现插件工作区 `status.json` | `create` 插件建立 scaffold；`modify` 插件不建立 |
-| `skill-design` | 出现 `skill-map.md`；skill 进入 `draft` | — |
-| `spec-generate` | 生成 `brief.md`、`plugin.json.draft`，插件 phase 进入 `building` | 生成 skill 骨架和 command |
-| `build-skills` | 除状态更新外无新增设计文档 | `skill-creator` 在 `target_dir` 中原地补全或修改实现 |
+| `skill-design` | 出现 `skill-map.md`（含特征 + 流水线）；skill 进入 `draft` | — |
+| `spec-generate` | 生成 `brief.md`、`plugin.json.draft`，插件 phase 进入 `building` | 生成 skill 骨架和 command + 特征条件脚手架 |
+| `build-skills` | 除状态更新外无新增设计文档 | `skill-creator` 在 `target_dir` 中产出初稿（初始填充） |
 | `validate` | 匹配的工作区 phase 进入 `approved`，skill 进入 `tested` | 校验 `target_dir` 中实现 |
-| `promote` | 插件工作区从 `changes/` 移动到 `archive/{plugin}/{date}-iteration-{N}` | 写入正式 manifest；实现保留原地 |
+| `promote` | 设计文档**复制**到 `archive/{plugin}/{date}-iteration-{N}`；活跃工作区保留，phase 重置为 `planning`，iteration++ | 写入正式 manifest（版本递增）；实现保留原地 |
 | iteration N `event-storm` | 域工件原地更新；`changelog.md` 追加 | — |
 | iteration N `domain-model` | 只出现受影响插件的工作区 | `modify` 不建立 scaffold |
 | iteration N `spec-generate` | 更新 `brief.md`、`plugin.json.draft`、`status.json` | 只为新 skill 生成骨架；已有文件保留 |
@@ -1180,15 +1255,18 @@ studio/
 当前 Astra Studio 的目标模型可以概括为：
 
 - 域知识是持续累积的，保留在 `studio/changes/{domain}`
-- 插件工作区是临时的活跃变更记录
+- 插件工作区是**持续活跃的**变更记录（promote 后保留，不删除）
 - 实现始终存在于 `target_dir`
-- 已交付的设计工作区进入 `studio/archive/`
+- promote 将设计文档**复制**到 `studio/archive/`（里程碑快照），活跃工作区保留供下一轮迭代
+- `build-skills` 产出初稿（初始填充），用户用 `skill-creator` 迭代优化
+- `skill-design` 自动检测插件特征（stateful、hil-gated 等），驱动 `spec-generate` 产出条件性脚手架
 - 用户负责阶段确认
 - 系统负责阶段执行
 
 这个模型的核心价值在于：
 
 - 用户只判断方向
-- 系统完成构建
-- 设计过程可追踪
+- 系统完成构建（初始填充 + 条件性脚手架）
+- 设计过程可追踪（版本化归档）
 - 实现始终保持唯一事实源
+- 迭代永不停止（promote 是里程碑，不是终点）

@@ -155,11 +155,48 @@ graph LR
     SK --> R3[其他兼容<br/>运行时]
 ```
 
-### 2.5 专家是开发时资产
+### 2.5 专家范围：规划时 vs 运行时
 
-领域专家参与**规划阶段**，不参与运行时。他们的知识被"消化"进 SKILL.md 的指令中 —— 最终插件不依赖任何专家代理文件。
+领域专家分为两类：
 
-> 类比：建筑师参与设计房屋，但住户不需要建筑师住在房子里。
+| 阶段 | 存放位置 | 随插件分发？ |
+|------|---------|------------|
+| **规划时专家** | `studio-insight/agents/` 或 `studio/agents/` | 否 —— 知识被"消化"进 SKILL.md |
+| **运行时专家** | `{target_dir}/agents/` | 是 —— 随插件一起安装 |
+
+规划时专家（产品经理、架构师等）参与**规划阶段**，他们的知识被编入 SKILL.md 的指令中。运行时专家（如营养顾问）在插件实际运行时被调用，需要随插件一起分发。
+
+> 类比：建筑师参与设计房屋（规划时），但物业管理员需要住在小区里（运行时）。
+
+`skill-design` 阶段的 `expert-scoped` 特征检测会自动区分这两类专家。
+
+### 2.6 插件特征驱动脚手架
+
+`skill-design` 阶段会自动检测 5 种跨领域特征（traits），驱动 `spec-generate` 产出条件性的脚手架：
+
+| 特征 | 检测信号 | 下游影响 |
+|------|---------|---------|
+| `stateful` | 插件跨会话管理项目数据 | 生成 init-workspace skill + 运行时 config/status 模板 |
+| `hil-gated` | 流程中有人工审批节点 | skill 在审批边界拆分；骨架注入审批门段落 |
+| `kb-dependent` | skill 需要超出 references/ 的领域知识 | 标注 KB 集成需求 |
+| `multi-pipeline` | 领域有 2+ 条独立业务流水线 | 为每条流水线生成编排命令 |
+| `expert-scoped` | 运行时需要与规划阶段不同的领域专家 | 区分规划时/运行时专家，运行时专家随插件分发 |
+
+无特征的插件走原有路径，不受影响。
+
+### 2.7 初始填充而非最终构建
+
+`build-skills` 产出**可工作的初稿**，而非完成品。用户需要用 `skill-creator` 进行迭代优化：
+
+| 维度 | 初始填充（build-skills） | 迭代优化（skill-creator） |
+|------|------------------------|------------------------|
+| 目的 | 快速起步 | 精打细磨 |
+| 产出 | 可工作的初稿 | 生产级实现 |
+| 覆盖 | 核心逻辑 + 基本流程 | 边界情况 + 错误处理 + 评估 |
+
+### 2.8 版本化发布
+
+`promote` 是**里程碑**，不是终态。每次发布创建版本化快照（v0.1 → v0.2），设计文档被**复制**（不是移动）到归档，活跃工作区保留供下一轮迭代使用。
 
 ---
 
@@ -225,22 +262,24 @@ graph TD
         ES -->|调用| PI["persona-insight<br/>画像卡片"]
         ES -->|调用| JM["journey-map<br/>旅程地图"]
         ES -->|调用| PF["process-flow<br/>流程图"]
+        ES -->|产出| KB["KB 依赖 + 专家范围"]
         ES -->|产出| HS[热点排名]
     end
 
     HS -->|用户确认| DM
 
     subgraph Phase2["阶段二 - 建模"]
-        DM[domain-model] -->|调用| DC["domain-canvas<br/>领域画布"]
-        DM -->|调用| BM["behavior-matrix<br/>行为矩阵"]
-        DM -->|调用| OB["opportunity-brief<br/>机会评估"]
-        DM -->|产出| PC[插件候选]
+        DM[domain-model] -->|可选调用| DC["domain-canvas<br/>领域画布"]
+        DM -->|可选调用| BM["behavior-matrix<br/>行为矩阵"]
+        DM -->|可选调用| OB["opportunity-brief<br/>机会评估"]
+        DM -->|产出| PC[插件候选 + 流水线]
     end
 
     PC -->|用户确认| SD
 
     subgraph Phase3["阶段三 - 设计"]
-        SD[skill-design] -->|产出| SM["技能地图 + 数据流"]
+        SD[skill-design] -->|检测| TR["插件特征<br/>stateful / hil-gated / kb-dependent<br/>multi-pipeline / expert-scoped"]
+        SD -->|产出| SM["技能地图 + 数据流 + 特征"]
     end
 
     SM -->|用户确认| SG
@@ -250,10 +289,14 @@ graph TD
         SG -->|产出| MF[plugin.json.draft]
         SG -->|产出| CMD[命令文件]
         SG -->|产出| BR[brief.md]
+        SG -->|条件产出| RT["运行时脚手架<br/>HIL 门 / 流水线命令"]
     end
 
-    SK --> AUTH["技能编创 - 内循环"]
+    SK --> BS["build-skills<br/>初始填充"]
+    BS --> AUTH["测试 + 迭代<br/>(skill-creator)"]
 ```
+
+> **完整分析 vs 快速模式**：`domain-model` 支持两种执行深度。完整分析（默认）调用 domain-canvas、behavior-matrix、opportunity-brief；快速模式跳过这三个工件技能，直接从事件聚类推导插件候选。
 
 ---
 
@@ -277,11 +320,12 @@ graph TB
         BM2[behavior-matrix]
         OB2[opportunity-brief]
     end
-    subgraph "studio-planner(4 个技能)"
+    subgraph "studio-planner(5 个技能)"
         ES2[event-storm]
         DM2[domain-model]
         SD2[skill-design]
         SG2[spec-generate]
+        BS2[build-skills]
     end
     subgraph "studio-quality(2 个技能 + 7 个脚本)"
         PV[plugin-validator]
@@ -342,7 +386,13 @@ graph TD
 ```
 
 - **域级工作区**：共享产出物（事件风暴、领域地图、画像、旅程、流程）。一个域可以衍生多个插件。
-- **插件级工作区**：插件专有产出物（技能地图、SKILL.md 骨架）。通过 status.json 中的 `domain` 字段引用父级域。
+- **插件级工作区**：插件专有设计文档（技能地图、brief.md、plugin.json.draft）。通过 status.json 中的 `domain` 字段引用父级域，`target_dir` 字段指向实现目录。不包含 SKILL.md 或命令文件 —— 这些直接在 `{target_dir}/` 中生成。
+
+当插件具有特定特征时，`spec-generate` 会在 `{target_dir}/` 中产出额外脚手架：
+- **stateful**：`skills/init-workspace/SKILL.md` + `templates/runtime-config.yaml.tmpl` + `templates/runtime-status.json.tmpl`
+- **hil-gated**：相关 SKILL.md 骨架中注入 `## Approval Gate` 段落
+- **multi-pipeline**：每条流水线的 `commands/{pipeline-name}.md` 编排命令
+- **expert-scoped**：`agents/` 目录中的运行时专家定义
 
 ### 4.4 技能全景
 
@@ -358,10 +408,11 @@ graph TD
 | studio-insight | domain-canvas | 工件 | 架构师 | 领域边界地图 |
 | studio-insight | behavior-matrix | 工件 | 架构师 | 行为矩阵 |
 | studio-insight | opportunity-brief | 工件 | 产品经理 | 优先级排序 + 投入评估 |
-| studio-planner | event-storm | 流水线 | 多角色 | event-storm.md + 工件调用 |
-| studio-planner | domain-model | 流水线 | 架构师 | domain-map.md + 插件候选 |
-| studio-planner | skill-design | 流水线 | 架构师 | skill-map.md + 依赖图 |
-| studio-planner | spec-generate | 流水线 | — | SKILL.md 骨架 + 清单 |
+| studio-planner | event-storm | 流水线 | 多角色 | event-storm.md + 工件调用 + KB 依赖 + 专家范围 |
+| studio-planner | domain-model | 流水线 | 架构师 | domain-map.md + 插件候选（支持完整/快速模式） |
+| studio-planner | skill-design | 流水线 | 架构师 | skill-map.md + 特征检测 + 依赖图 |
+| studio-planner | spec-generate | 流水线 | — | SKILL.md 骨架 + 清单 + 特征条件脚手架 |
+| studio-planner | build-skills | 流水线 | — | 初始填充（调用 skill-creator 产出可工作的初稿） |
 | studio-quality | plugin-validator | 质量 | — | 校验报告 |
 | studio-quality | mcp-wiring | 质量 | — | .mcp.json 配置 |
 
@@ -502,7 +553,7 @@ studio/
 | `/studio-core:init` | 初始化工作区 |
 | `/studio-core:status` | 显示开发仪表板 |
 | `/studio-core:create-expert` | 创建/定制领域专家 |
-| `/studio-core:promote {name}` | 发布已验证的插件 |
+| `/studio-core:promote {name}` | 创建版本化里程碑（v0.1 → v0.2） |
 | `/studio-planner:plan {domain}` | 运行完整规划流水线 |
 | `/studio-insight:persona-insight` | 生成用户画像卡片 |
 | `/studio-insight:journey-map` | 生成用户旅程地图 |
@@ -564,14 +615,20 @@ sequenceDiagram
 ```
 
 **关键产出**：
-- `event-storm.md` —— 综合头脑风暴结果
+- `event-storm.md` —— 综合头脑风暴结果 + KB 依赖分析 + 专家范围分析
 - `personas/{name}.md` —— 画像卡片 + 同理心地图
 - `journeys/{scenario}.md` —— 旅程地图 + 情绪曲线
 - `processes/{process}.md` —— 业务流程图
 
+> **新增**：event-storm 阶段现在还会识别知识库依赖热点（哪些领域知识超出 LLM 能力范围）和专家范围（哪些专家是规划时使用、哪些需要在运行时随插件分发）。
+
 ### 7.2 阶段二：领域建模
 
 **目标**：识别插件边界，确定构建优先级。
+
+**执行深度**：用户可选择两种模式：
+- **完整分析**（默认）：调用 domain-canvas、behavior-matrix、opportunity-brief，适合复杂领域或首次规划
+- **快速模式**：跳过这三个工件技能，直接从事件聚类推导插件候选，适合领域已明确或迭代更新
 
 ```mermaid
 sequenceDiagram
@@ -586,18 +643,21 @@ sequenceDiagram
     DM->>U: 我看到这些分组, 对吗?
     U->>DM: 调整
 
-    DM->>DC: 绘制领域边界和分类
-    DC-->>DM: domain-canvas.md
+    alt 完整分析模式
+        DM->>DC: 绘制领域边界和分类
+        DC-->>DM: domain-canvas.md
+        DM->>BM: 构建行为矩阵
+        BM-->>DM: behavior-matrix.md
+    end
 
-    DM->>BM: 构建行为矩阵
-    BM-->>DM: behavior-matrix.md
-
-    DM->>DM: 提出插件候选
+    DM->>DM: 提出插件候选(含流水线识别)
     DM->>U: 插件结构, 批准?
     U->>DM: 批准, 修改了名称
 
-    DM->>OB: 评估优先级
-    OB-->>DM: opportunity-brief.md
+    alt 完整分析模式
+        DM->>OB: 评估优先级
+        OB-->>DM: opportunity-brief.md
+    end
 
     DM->>DM: 写入 domain-map.md
     DM->>DM: 创建插件工作区
@@ -619,7 +679,7 @@ graph LR
 
 ### 7.3 阶段三：技能设计
 
-**目标**：将每个插件拆分为接口清晰、数据流明确的技能。
+**目标**：将每个插件拆分为接口清晰、数据流明确的技能，并检测插件的跨领域特征。
 
 **核心原则**：
 
@@ -627,8 +687,14 @@ graph LR
 |------|---------|
 | 单一职责 | 每个技能只做一件事 |
 | 用户决策点 | 在用户需要做决定的地方拆分 |
+| HIL 检查点 | 在人工审批节点拆分 |
+| 流水线独立 | 不同业务流水线的技能不强行合并 |
 | 明确接口 | 每个技能都有定义好的输入、输出和范围外 |
 | 无循环依赖 | 数据单向流动 |
+
+**插件特征检测**：
+
+在技能拆分之前，`skill-design` 会从上游产出物（event-storm.md、domain-map.md）中检测 5 种跨领域特征：`stateful`、`hil-gated`、`kb-dependent`、`multi-pipeline`、`expert-scoped`。特征检测结果写入 `skill-map.md` 的 `## Plugin Traits` 段落，驱动 `spec-generate` 的条件性脚手架生成。
 
 **复杂度分层**：
 
@@ -641,9 +707,9 @@ graph LR
 
 ### 7.4 阶段四：规格生成
 
-**目标**：生成全部规格文件 —— 无需人工输入。
+**目标**：生成全部规格文件 —— 无需人工输入。根据插件特征产出条件性脚手架。
 
-**生成内容**：
+**基础生成内容**（所有插件）：
 
 | 文件 | 说明 | 平台属性 |
 |------|------|---------|
@@ -652,7 +718,28 @@ graph LR
 | `skills/{name}/SKILL.md` | 技能骨架 | **平台无关** |
 | `commands/{name}.md` | 命令文件 | 标准规范 |
 
-此阶段完成后，状态从 `planning` 推进到 `building`，内循环开始。
+**特征条件生成**（仅检测到特征时）：
+
+| 特征 | 额外产出 |
+|------|---------|
+| `stateful` | `skills/init-workspace/SKILL.md` + `templates/runtime-config.yaml.tmpl` + `templates/runtime-status.json.tmpl` |
+| `hil-gated` | 相关 SKILL.md 骨架中的 `## Approval Gate` 段落 |
+| `multi-pipeline` | 每条流水线的 `commands/{pipeline-name}.md` 编排命令 |
+| `expert-scoped` | `agents/` 目录中的运行时专家定义 |
+
+此阶段完成后，状态从 `planning` 推进到 `building`。
+
+### 7.5 阶段五：初始填充
+
+**目标**：`build-skills` 调用 `skill-creator` 为每个骨架产出**可工作的初稿**。
+
+这是初始填充，不是最终构建。初稿覆盖核心逻辑和基本流程，但边界情况、错误处理和评估用例需要用户后续用 `skill-creator` 迭代优化。
+
+此阶段完成后，用户应：
+1. 用真实输入测试每个技能
+2. 用 `skill-creator` 迭代优化
+3. 运行 `/studio-quality:validate` 校验
+4. 运行 `/studio-core:promote` 创建版本化里程碑
 
 ---
 
@@ -895,14 +982,20 @@ graph TD
 
 ### 9.5 阶段四：规格生成
 
-**生成的工作区**：
+**设计工作区**（`studio/changes/`）：
 
 ```
 studio/changes/nutrition-planner/
 ├── brief.md
 ├── plugin.json.draft
-├── skill-map.md
-├── status.json               # phase: building
+├── skill-map.md               # 含 ## Plugin Traits 和 ## Pipelines 段落
+└── status.json                # phase: building
+```
+
+**实现目录**（`{target_dir}/`）—— 单一事实源：
+
+```
+nutrition-planner/
 ├── skills/
 │   ├── set-nutrition-goal/
 │   │   └── SKILL.md           # 骨架
@@ -920,6 +1013,8 @@ studio/changes/nutrition-planner/
     ├── log-meal.md
     └── nutrition-advisor.md
 ```
+
+> 如果 `skill-design` 检测到 `stateful` 特征，`spec-generate` 还会在 `nutrition-planner/` 下生成 `skills/init-workspace/SKILL.md`、`templates/runtime-config.yaml.tmpl` 和 `templates/runtime-status.json.tmpl`。
 
 ### 9.6 专家审查的实际影响
 
@@ -998,16 +1093,18 @@ stateDiagram-v2
     building --> testing : 所有技能编写完成
     testing --> approved : /studio-quality∶validate 通过
     approved --> shipped : /studio-core∶promote
-    shipped --> [*]
+    shipped --> planning : 下一轮迭代
 ```
+
+> **promote 是里程碑，不是终态**。每次 promote 创建版本化快照（v0.1 → v0.2），设计文档被**复制**到归档，活跃工作区重置为 `planning` 以支持持续迭代。
 
 **插件内的技能状态**：
 
 ```mermaid
 stateDiagram-v2
     [*] --> draft : 骨架已创建
-    draft --> spec_ready : 详细 SKILL.md 已编写
-    spec_ready --> tested : 评估通过
+    draft --> built : build-skills 初始填充
+    built --> tested : 评估通过
     tested --> approved : 所有技能已测试
 ```
 
@@ -1025,10 +1122,15 @@ stateDiagram-v2
 | `personas/{name}.md` | persona-insight | 用户画像卡片 |
 | `journeys/{name}.md` | journey-map | 用户旅程地图 |
 | `processes/{name}.md` | process-flow | 业务流程图 |
-| `skill-map.md` | skill-design | 技能分解和数据流 |
+| `skill-map.md` | skill-design | 技能分解 + 数据流 + 插件特征 + 流水线 |
 | `brief.md` | spec-generate | 业务上下文摘要 |
 | `plugin.json.draft` | spec-generate | 插件清单草稿 |
 | `skills/{name}/SKILL.md` | spec-generate | 技能骨架 |
+| `skills/init-workspace/SKILL.md` | spec-generate | 运行时工作区初始化（stateful 特征） |
+| `templates/runtime-config.yaml.tmpl` | spec-generate | 运行时配置模板（stateful 特征） |
+| `templates/runtime-status.json.tmpl` | spec-generate | 运行时状态模板（stateful 特征） |
+| `commands/{pipeline}.md` | spec-generate | 流水线编排命令（multi-pipeline 特征） |
+| `agents/{expert}.md` | spec-generate | 运行时专家定义（expert-scoped 特征） |
 | `status.json` | 多个技能 | 阶段追踪 |
 
 ### C. 内置领域专家
