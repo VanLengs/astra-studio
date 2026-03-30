@@ -32,12 +32,15 @@ claude plugin install studio-quality@astra-studio
 /studio-planner:plan "your business domain"
 
 # 5. Confirm the build plan
-# → Astra Studio generates specs, then automatically invokes skill-creator in {target_dir}/
+# → Astra Studio generates specs, then produces initial skill drafts in {target_dir}/
 
-# 6. Validate the plugin
+# 6. Test and iterate each skill with real inputs
+# → Use skill-creator to refine individual skills
+
+# 7. Validate the plugin
 /studio-quality:validate {target_dir}
 
-# 7. Ship it
+# 8. Ship a version (design docs stay active for next iteration)
 /studio-core:promote {plugin-name}
 ```
 
@@ -56,19 +59,21 @@ These 6 skills produce professional deliverables independently — no pipeline r
 
 ## studio-planner: Planning Pipeline
 
-`/studio-planner:plan` chains 5 pipeline skills, each invoking insight artifact skills:
+`/studio-planner:plan` chains 5 pipeline skills:
 
 ```
 Step 1: event-storm
   Multi-role brainstorming (PM, architect, domain experts)
   → Invokes: persona-insight, journey-map, process-flow
+  → Identifies: KB dependencies, expert scope (planning vs runtime)
   → Writes: studio/changes/{domain}/event-storm.md
 
         ↓ user confirms
 
 Step 2: domain-model
   Clusters events into business domains, draws plugin boundaries
-  → Invokes: domain-canvas, behavior-matrix, opportunity-brief
+  → Full analysis mode: invokes domain-canvas, behavior-matrix, opportunity-brief
+  → Fast mode: skips insight tools, goes directly to plugin proposals
   → Writes: studio/changes/{domain}/domain-map.md
   → Creates: {target_dir}/ scaffold for each plugin candidate
 
@@ -76,23 +81,27 @@ Step 2: domain-model
 
 Step 3: skill-design
   Breaks each plugin into skills with interfaces and data flow
+  → Detects plugin traits: stateful, hil-gated, kb-dependent, multi-pipeline, expert-scoped
   → Assesses complexity: prompt-only / scripts / MCP
-  → Writes: studio/changes/{plugin}/skill-map.md
+  → Writes: studio/changes/{plugin}/skill-map.md (includes traits + pipelines)
 
         ↓ user confirms
 
 Step 4: spec-generate
-  Auto-generates all specification files
+  Auto-generates specification files + trait-conditional scaffolding
   → Design docs → studio/changes/ (brief.md, plugin.json.draft)
   → Implementation → {target_dir}/ (SKILL.md skeletons, commands)
+  → If stateful: init-workspace skill + runtime config/status templates
+  → If hil-gated: approval gate sections in relevant skills
+  → If multi-pipeline: per-pipeline orchestration commands
   → Advances status: planning → building
 
-Step 5+: build, validate, promote
-  build-skills automatically invokes skill-creator to edit the implementation in {target_dir}/
-  build-skills advances skill states from draft/building to built
-  /studio-quality:validate validates {target_dir}/ and updates the matching workspace
-  /studio-quality:validate advances built skills to tested and the plugin to approved
-  /studio-core:promote finalizes the manifest and archives only the design workspace
+Step 5+: build, test, validate, promote
+  build-skills produces initial skill drafts via skill-creator (working first drafts)
+  → Test each skill with real inputs, iterate with skill-creator
+  /studio-quality:validate validates {target_dir}/ and advances to approved
+  /studio-core:promote creates a versioned milestone (v0.1 → v0.2)
+  → Design docs are snapshotted to archive but stay active for next iteration
 ```
 
 ### Subagent Roles
@@ -125,30 +134,40 @@ Custom experts are saved to `studio/agents/` (git-tracked, team-shared) and auto
 /studio-core:init                       /studio-planner:plan
         ↓                                       ↓
     studio/                             event-storm
-    ├── config.yaml                       ├── persona-insight  → personas/
-    ├── changes/                          ├── journey-map      → journeys/
-    └── archive/                          └── process-flow     → processes/
+    ├── config.yaml                       ├── persona-insight   → personas/
+    ├── changes/                          ├── journey-map       → journeys/
+    └── archive/                          ├── process-flow      → processes/
+                                          ├── KB dependencies   → event-storm.md
+                                          └── expert scope      → event-storm.md
                                                 ↓
-                                        domain-model
-                                          ├── domain-canvas    → domain-canvas.md
-                                          ├── behavior-matrix  → behavior-matrix.md
-                                          └── opportunity-brief→ opportunity-brief.md
+                                        domain-model (full / fast mode)
+                                          ├── domain-canvas     → domain-canvas.md    ┐
+                                          ├── behavior-matrix   → behavior-matrix.md  ├ full mode only
+                                          └── opportunity-brief → opportunity-brief.md┘
                                                 ↓
-                                        skill-design → skill-map.md
+                                        skill-design
+                                          ├── trait detection   → skill-map.md
+                                          └── skill breakdown   → skill-map.md
                                                 ↓
-                                        spec-generate
+                                        spec-generate + trait scaffolding
                                                 ↓
                                 studio/changes/{plugin}/    {target_dir}/
                                 ├── brief.md                skills/{skill}/SKILL.md
                                 └── plugin.json.draft       commands/{skill}.md
+                                                            commands/{pipeline}.md  (multi-pipeline)
+                                                            skills/init-workspace/  (stateful)
+                                                            agents/                 (expert-scoped)
                                                 ↓
-                              build-skills
+                              build-skills (initial drafts)
+                                                ↓
+                              test + iterate with skill-creator
                                                 ↓
                               /studio-quality:validate
                                                 ↓
-                              /studio-core:promote
+                              /studio-core:promote (versioned: v0.1 → v0.2)
                                                 ↓
-          studio/archive/{plugin}/{date}-iteration-{N}/   {target_dir}/
+      studio/archive/{plugin}/{date}-iteration-{N}/   {target_dir}/.claude-plugin/
+      (snapshot — originals stay in changes/)          plugin.json (version bumped)
 ```
 
 ## Architecture
@@ -164,7 +183,7 @@ The `studio/` directory is **git-tracked** — it holds development documentatio
 
 Domains evolve **incrementally** — re-running the pipeline updates artifacts in-place (git diff = revision history), `changelog.md` logs each iteration, and only affected plugins (`create`/`modify`) get change workspaces.
 
-Shipped plugins keep their implementation in `{target_dir}/` and move only the design workspace to `studio/archive/{plugin}/{date}-iteration-{N}/` so active work stays clean while design history remains traceable.
+Promotion creates versioned milestones — design docs are **copied** (not moved) to `studio/archive/{plugin}/{date}-iteration-{N}/`, so the active workspace remains available for continued iteration. Version numbers increment automatically (v0.1.0 → v0.1.1).
 
 ## Development
 
