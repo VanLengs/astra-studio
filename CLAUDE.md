@@ -10,6 +10,7 @@ This is a marketplace of Claude Code plugins for plugin development workflows. E
 ├── studio-planner/      # Planning pipeline (event-storm, domain-model, skill-design, spec-generate, build-skills) — 5 skills
 ├── studio-quality/      # Quality assurance (plugin validation, MCP wiring) — 2 skills
 ├── studio-docs/         # Document delivery suite (blueprints, writing experts, parallel generation, export) — 6 skills
+├── studio-platform/     # Platform documentation generator (brainmap, agent mapping, tech designs, visualization) — 6 skills
 ```
 
 ## Plugin Dependencies
@@ -20,6 +21,7 @@ studio-insight   (zero deps)
 studio-planner   (depends on studio-core + studio-insight)
 studio-quality   (zero deps)
 studio-docs      (depends on studio-core; consumes artifacts from studio-planner + studio-insight)
+studio-platform  (depends on studio-core; consumes artifacts from studio-planner + studio-insight)
 ```
 
 ## Plugin Structure

@@ -30,6 +30,11 @@
       "name": "studio-docs",
       "source": "./studio-docs",
       "description": "Document delivery suite — blueprints, writing experts, parallel chapter generation, multi-format export (MD/DOCX/PDF)"
+    },
+    {
+      "name": "studio-platform",
+      "source": "./studio-platform",
+      "description": "Platform documentation generator — brainmap, agent-plugin mapping, tech designs (DW/KG/ML/RAG), project plan, .pen visualization, speech scripts"
     }
   ]
 }

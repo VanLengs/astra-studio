@@ -1,0 +1,14 @@
+{
+  "name": "studio-platform",
+  "version": "0.1.0",
+  "description": "Platform documentation generator — produce industry AI model platform documentation (brainmap, agent-plugin mapping, data warehouse, knowledge graph, ML models, RAG system, project plan, visualization, presentation scripts) from studio planning artifacts. Domain-agnostic: works for any industry vertical.",
+  "author": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["platform", "brainmap", "agent-mapping", "data-warehouse", "knowledge-graph", "ml-models", "rag", "visualization"],
+  "dependencies": ["studio-core"],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}

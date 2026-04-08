@@ -12,6 +12,8 @@ Astra Studio handles the **outer loop** of plugin development — business analy
 | **studio-insight** | 6 | Business analysis toolkit — personas, journeys, processes, domains | `claude plugin install studio-insight@astra-studio` |
 | **studio-planner** | 5 | Planning pipeline — event storming, domain modeling, skill design, build orchestration | `claude plugin install studio-planner@astra-studio` |
 | **studio-quality** | 2 | Quality assurance — plugin validation, MCP wiring | `claude plugin install studio-quality@astra-studio` |
+| **studio-docs** | 6 | Document delivery — blueprints, writing experts, parallel generation, export | `claude plugin install studio-docs@astra-studio` |
+| **studio-platform** | 6 | Platform docs — brainmap, agent mapping, tech designs, visualization, speech | `claude plugin install studio-platform@astra-studio` |
 
 ## Quick Start
 
@@ -24,6 +26,7 @@ claude plugin install studio-core@astra-studio
 claude plugin install studio-insight@astra-studio
 claude plugin install studio-planner@astra-studio
 claude plugin install studio-quality@astra-studio
+claude plugin install studio-platform@astra-studio
 
 # 3. Initialize studio in your project
 /studio-core:init
@@ -104,6 +107,51 @@ Step 5+: build, test, validate, promote
   → Design docs are snapshotted to archive but stay active for next iteration
 ```
 
+## studio-platform: Platform Documentation Generator
+
+After completing the planning pipeline, generate a full platform documentation suite:
+
+```bash
+# Generate all platform docs
+/studio-platform:platform-docs {domain-name}
+
+# Generate specific steps only
+/studio-platform:platform-docs {domain-name} --steps brainmap,mapping
+
+# With reference .pen file for visualization
+/studio-platform:platform-docs {domain-name} --reference /path/to/ref.pen
+```
+
+Pipeline (6 steps):
+
+```
+Step 1: generate-brainmap
+  → brainmap-index.md + brainmap-module-1~N.md
+  Organizes agents by module with skill/data/model dependencies
+
+Step 2: generate-agent-mapping
+  → agent-plugin-mapping.md
+  Maps agents ↔ plugins ↔ skills with architecture diagrams
+
+Step 3: generate-tech-designs  (parallelized)
+  → data-warehouse-design.md     (Kimball dimensional modeling)
+  → data-collection-design.md    (IoT/edge-cloud pipelines)
+  → knowledge-graph-design.md    (ontology, sub-graphs, reasoning)
+  → ml-models-design.md          (model cards, MLOps pipeline)
+  → rag-system-design.md         (knowledge bases, hybrid retrieval)
+
+Step 4: generate-project-plan
+  → project-plan.md              (Gantt, milestones, team, risks)
+
+Step 5: generate-platform-visual
+  → {platform-name}.pen          (4-frame design visualization)
+
+Step 6: generate-speech
+  → 迎检话术-{platform-name}.md   (presentation speech script)
+```
+
+Domain-agnostic — works for any industry vertical (elderly care, education, healthcare, etc.).
+
 ### Subagent Roles
 
 Both studio-insight and studio-planner use multiple perspectives via subagent roles:
@@ -178,6 +226,7 @@ Astra Studio is a **marketplace** (collection of plugins), not a monolithic plug
 - **studio-insight**: Zero dependencies. Standalone business analysis tools. Useful beyond plugin development.
 - **studio-planner**: Depends on studio-core and studio-insight. Orchestrates the planning pipeline.
 - **studio-quality**: Zero dependencies. Can validate any plugin, not just studio-managed ones.
+- **studio-platform**: Depends on studio-core. Generates industry AI model platform documentation from planning artifacts.
 
 The `studio/` directory is **git-tracked** — it holds development documentation (briefs, design decisions, status) with version control value. Inspired by [OpenSpec](https://github.com/Fission-AI/OpenSpec)'s spec-driven workspace pattern.
 
@@ -189,7 +238,7 @@ Promotion creates versioned milestones — design docs are **copied** (not moved
 
 ```bash
 # Test locally
-claude --plugin-dir ./studio-core --plugin-dir ./studio-insight --plugin-dir ./studio-planner --plugin-dir ./studio-quality
+claude --plugin-dir ./studio-core --plugin-dir ./studio-insight --plugin-dir ./studio-planner --plugin-dir ./studio-quality --plugin-dir ./studio-docs --plugin-dir ./studio-platform
 ```
 
 ## License
