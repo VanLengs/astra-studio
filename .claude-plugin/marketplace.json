@@ -35,6 +35,11 @@
       "name": "studio-platform",
       "source": "./studio-platform",
       "description": "Platform documentation generator — brainmap, agent-plugin mapping, tech designs (DW/KG/ML/RAG), project plan, .pen visualization, speech scripts"
+    },
+    {
+      "name": "studio-design",
+      "source": "./studio-design",
+      "description": "Design-to-code pipeline — screenshot → Pencil prototype → OpenSpec proposal → working code"
     }
   ]
 }

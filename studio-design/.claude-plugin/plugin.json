@@ -1,0 +1,13 @@
+{
+  "name": "studio-design",
+  "version": "0.1.0",
+  "description": "Design-to-code pipeline — convert screenshots to Pencil prototypes, Pencil prototypes to OpenSpec proposals, and OpenSpec proposals to working code",
+  "author": {
+    "name": "VanLengs",
+    "url": "https://github.com/VanLengs"
+  },
+  "license": "Apache-2.0",
+  "keywords": ["design", "prototype", "pencil", "openspec", "code-generation", "screenshot"],
+  "skills": "./skills/",
+  "commands": "./commands/"
+}
